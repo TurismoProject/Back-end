@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  db:
+    container_name: polls_pg
+    image: postgres:16.3
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - 'polls_pg_data:/var/lib/postgresql/data'
+    networks:
+      - postgres-compose-network
+
+  pgAdmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: 'matheusrogato@gmail.com'
+      PGADMIN_DEFAULT_PASSWORD: 'admin'
+    ports:
+      - '5050:80'
+    depends_on:
+      - db
+    networks:
+      - postgres-compose-network
+
+volumes:
+  polls_pg_data:
+
+networks:
+  postgres-compose-network:
+    driver: bridge
