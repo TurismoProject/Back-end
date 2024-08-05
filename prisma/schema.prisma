@@ -13,35 +13,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Admin {
-  id         Int           @id @default(autoincrement())
-  email       String       @unique @db.VarChar(255)
-  senha       String       @db.VarChar(255)
-  nome        String
+// model Admin {
+//   id          Int          @id @default(autoincrement())
+//   email       String       @unique @db.VarChar(255)
+//   senha       String       @db.VarChar(255)
+//   nome        String
+// }
 
-
-}
-
-model Fornecedor {
-  id          Int      @id @default(autoincrement())
-  email       String   @unique @db.VarChar(255)
-  senha       String   @db.VarChar(255)
-  nomeEmpresa String   @db.VarChar(255)
-  cnpj        String   @unique @db.VarChar(255)
-  telefone    String   @db.VarChar(255)
-  endereco    String   @db.VarChar(255)
-
-}
+// model Fornecedor {
+//   id          Int      @id @default(autoincrement())
+//   email       String   @unique @db.VarChar(255)
+//   senha       String   @db.VarChar(255)
+//   nomeEmpresa String   @db.VarChar(255)
+//   cnpj        String   @unique @db.VarChar(255)
+//   telefone    String   @db.VarChar(255)
+//   endereco    String   @db.VarChar(255)
+// }
 
 model Cliente {
   id             Int       @id @default(autoincrement())
   email          String    @unique @db.VarChar(255)
   senha          String    @db.VarChar(255)
-  nome           String
-  cpf            String    @db.VarChar(255)
-  dataNascimento DateTime
-  telefone       String    @db.VarChar(255)
-  endereco       String    @db.VarChar(255)
-
-
+  nome           String?
+  cpf            String?    @db.VarChar(255)
+  dataNascimento String?    @db.VarChar(255)
+  telefone       String?    @db.VarChar(255)
+  endereco       String?    @db.VarChar(255)
 }

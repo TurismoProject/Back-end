@@ -1,11 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/database/prisma.service';
-import UserCliente from './user.entity';
+import { ClientUserDto } from './dto/client.dto';
+import Client from './client.entity';
 
 @Injectable()
-export class UserRepository {
+export class ClientService {
   constructor(private prismaService: PrismaService) {}
 
+  async create(client: ClientUserDto) {
+    return this.prismaService.cliente.create({ data: client });
+  }
   async findAll() {
     return this.prismaService.cliente.findMany();
   }
@@ -14,15 +18,11 @@ export class UserRepository {
     return this.prismaService.cliente.findUnique({ where: { id } });
   }
 
-  async create(user: UserCliente) {
-    return this.prismaService.cliente.create({ data: user });
-  }
-
-  async update(user: UserCliente) {
+  async update(client: Client) {
     try {
       return this.prismaService.cliente.update({
-        where: { id: user.id },
-        data: user as any,
+        where: { id: client.id },
+        data: client as any,
       });
     } catch (error) {
       throw error;
