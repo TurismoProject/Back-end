@@ -30,13 +30,13 @@ datasource db {
 //   endereco    String   @db.VarChar(255)
 // }
 
-model Cliente {
+model User {
   id             Int       @id @default(autoincrement())
   email          String    @unique @db.VarChar(255)
   senha          String    @db.VarChar(255)
-  nome           String?
-  cpf            String?    @db.VarChar(255)
-  dataNascimento String?    @db.VarChar(255)
-  telefone       String?    @db.VarChar(255)
-  endereco       String?    @db.VarChar(255)
+  nome           String
+  cpf            String    @db.VarChar(255)
+  dataNascimento DateTime  @db.Date  
+  telefone       String    @db.VarChar(255)
+  endereco       String    @db.VarChar(255)
 }

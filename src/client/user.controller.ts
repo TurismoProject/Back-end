@@ -11,15 +11,16 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { ClientService } from './client.service';
-import { ClientUserDto } from './dto/client.dto';
-import Client from './client.entity';
+import { UserService } from './user.service';
+import { CreateUserDto } from './dto/create-user.dto';
+
 import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 @ApiTags('users')
-export class ClientController {
-  constructor(private repository: ClientService) {}
+export class UserController {
+  constructor(private repository: UserService) {}
 
   @Get()
   async findAll() {
@@ -34,14 +35,14 @@ export class ClientController {
     }
     return user;
   }
-  @Post('Cadastro')
-  async create(@Body() userClient: ClientUserDto) {
-    const newUser = await this.repository.create(userClient);
+  @Post('Cadastrar-se') //todo colocar header para autenticação do usuario
+  async create(@Body() user: CreateUserDto) {
+    const newUser = await this.repository.create(user);
     return newUser;
   }
 
-  @Patch(':id')
-  async update(@Param('id') id: number, @Body() user: Client) {
+  @Patch(':id') //todo colocar header para autenticação do usuario
+  async update(@Param('id') id: number, @Body() user: UpdateUserDto) {
     try {
     } catch (error) {}
     const updateUser = await this.repository.update({
@@ -51,7 +52,7 @@ export class ClientController {
     return updateUser;
   }
 
-  @Delete('delete')
+  @Delete('Excluir')
   async delete(@Headers('id') id: string) {
     const parsedId = parseInt(id, 10);
     try {
@@ -66,15 +67,6 @@ export class ClientController {
     } catch (error) {
       throw new ExceptionsHandler(error);
     }
-    // if (isNaN(parsedId)) {
-    //   throw new BadRequestException('Invalid ID');
-    // }
-
-    // const deleteResult = await this.repository.delete(parsedId);
-    // if (deleteResult.id === 0 || deleteResult.id === null) {
-    //   throw new NotFoundException('Entity not found');
-    // }
-
     return { message: 'Entity deleted successfully' };
   }
 }
