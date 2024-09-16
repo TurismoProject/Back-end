@@ -1,11 +1,10 @@
 import {
-  IsDate,
+  IsDateString,
   IsEmail,
   IsNotEmpty,
   IsString,
   IsStrongPassword,
 } from 'class-validator';
-import { TransformDate } from 'src/utils/utils';
 
 export class CreateUserDto {
   id: any;
@@ -28,11 +27,9 @@ export class CreateUserDto {
   //Todo @IsCpf() -> fazer decorator para o cpf
   cpf: string;
 
-  //TODO corrigir error: Invalid value for argument `dataNascimento`: input contains invalid characters. Expected ISO-8601 DateTime.
-  @TransformDate()
+  @IsDateString({ strict: true })
   @IsNotEmpty()
-  @IsDate()
-  dataNascimento: Date;
+  dataNascimento: string;
 
   @IsNotEmpty()
   @IsString()

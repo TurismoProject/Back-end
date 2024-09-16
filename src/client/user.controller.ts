@@ -5,14 +5,15 @@ import {
   Delete,
   Get,
   Headers,
+  HttpCode,
+  HttpStatus,
   NotFoundException,
-  Param,
   Patch,
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UserService } from './user.service';
 
 import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -20,7 +21,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 @Controller('users')
 @ApiTags('users')
 export class UserController {
-  constructor(private repository: UserService) {}
+  constructor(private repository: UserService) { }
 
   @Get()
   async findAll() {
@@ -28,13 +29,16 @@ export class UserController {
     return users;
   }
 
-  async findById(@Headers('id') id: string) {
-    const user = await this.repository.findUserById(parseInt(id));
+  @Get()
+  @HttpCode(HttpStatus.NOT_FOUND)
+  async findUserUnique(@Headers('cpf') cpf: string) {
+    const user = await this.repository.findUserUniqueCpf(cpf);
     if (!user) {
       throw new NotFoundException('User not found');
     }
     return user;
   }
+
   @Post('Cadastrar-se') //todo colocar header para autenticação do usuario
   async create(@Body() user: CreateUserDto) {
     const newUser = await this.repository.create(user);
@@ -42,23 +46,34 @@ export class UserController {
   }
 
   @Patch(':id') //todo colocar header para autenticação do usuario
-  async update(@Param('id') id: number, @Body() user: UpdateUserDto) {
+  async update(@Headers('id') id: string, @Body() user: UpdateUserDto) {
+    let updateUser = {}
+    const parsedId = parseInt(id, 10);
+
+    if (isNaN(parsedId)) {
+      throw new BadRequestException('Invalid ID');
+    }
+
     try {
-    } catch (error) {}
-    const updateUser = await this.repository.update({
-      ...user,
-      id: +id,
-    });
+      updateUser = await this.repository.update({
+        ...user,
+        id: parsedId,
+      });
+    } catch (error) {
+      throw new ExceptionsHandler(error);
+    }
     return updateUser;
   }
 
   @Delete('Excluir')
   async delete(@Headers('id') id: string) {
     const parsedId = parseInt(id, 10);
+
+    if (isNaN(parsedId)) {
+      throw new BadRequestException('Invalid ID');
+    }
+
     try {
-      if (isNaN(parsedId)) {
-        throw new BadRequestException('Invalid ID');
-      }
 
       const deleteResult = await this.repository.delete(parsedId);
       if (deleteResult.id === 0 || deleteResult.id === null) {
