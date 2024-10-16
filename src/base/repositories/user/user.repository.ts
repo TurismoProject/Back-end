@@ -1,14 +1,20 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from 'src/database/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '@base/database/prisma/prisma.service';
+import { CreateUserDto } from '@dtos/create-user.dto';
+import { UpdateUserDto } from '@dtos/update-user.dto';
+import { AbstractUserRepository } from './abstract-user.repository';
 
 @Injectable()
-export class UserService {
-  constructor(private prismaService: PrismaService) { }
+export class UserRepository implements AbstractUserRepository {
+  constructor(private prismaService: PrismaService) {}
 
   async create(user: CreateUserDto) {
-    const userExists = await this.prismaService.user.findFirst({
+    const userExists = await this.prismaService.usuario.findFirst({
       where: { cpf: user.cpf },
     });
     if (userExists) {
@@ -21,25 +27,25 @@ export class UserService {
       throw new BadRequestException('User must be at least 18 years old');
     }
     user.dataNascimento = dataNascimento.toISOString().split('T')[0];
-    return this.prismaService.user.create({ data: user });
+    return this.prismaService.usuario.create({ data: user });
   }
 
   async findAll() {
-    return this.prismaService.user.findMany();
+    return this.prismaService.usuario.findMany();
   }
 
   async findUserById(id: number) {
-    return this.prismaService.user.findUnique({ where: { id } });
+    return this.prismaService.usuario.findUnique({ where: { id } });
   }
 
   async findUserUniqueCpf(cpf: string) {
-    return this.prismaService.user.findFirstOrThrow({ where: { cpf } });
+    return this.prismaService.usuario.findFirstOrThrow({ where: { cpf } });
   }
 
   async update(user: UpdateUserDto) {
     await this.userExists(user.id);
     try {
-      return this.prismaService.user.update({
+      return this.prismaService.usuario.update({
         where: { id: user.id },
         data: user as any,
       });
@@ -50,7 +56,7 @@ export class UserService {
 
   async delete(id: number) {
     await this.userExists(id);
-    return this.prismaService.user.delete({ where: { id } });
+    return this.prismaService.usuario.delete({ where: { id } });
   }
 
   async userExists(id: number) {

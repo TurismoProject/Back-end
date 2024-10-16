@@ -13,31 +13,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id             Int       @id @default(autoincrement())
-  email          String    @unique @db.VarChar(255)
-  senha          String    @db.VarChar(255)
+model Usuario {
+  id             Int    @id @default(autoincrement())
+  email          String @unique @db.VarChar(255)
+  senha          String @db.VarChar(255)
   nome           String
-  cpf            String    @db.VarChar(255)
-  dataNascimento String    @db.VarChar(10)  
-  telefone       String    @db.VarChar(255)
-  endereco       String    @db.VarChar(255)
+  cpf            String @db.VarChar(255)
+  dataNascimento String @db.VarChar(10)
+  telefone       String @db.VarChar(255)
+  endereco       String @db.VarChar(255)
 }
 
 // model Admin {
-//   id          Int          @id @default(autoincrement())
-//   email       String       @unique @db.VarChar(255)
-//   senha       String       @db.VarChar(255)
-//   nome        String
+// id          Int          @id @default(autoincrement())
+// email       String       @unique @db.VarChar(255)
+// senha       String       @db.VarChar(255)
+// nome        String
 // }
 
-// model Fornecedor {
-//   id          Int      @id @default(autoincrement())
-//   email       String   @unique @db.VarChar(255)
-//   senha       String   @db.VarChar(255)
-//   nomeEmpresa String   @db.VarChar(255)
-//   cnpj        String   @unique @db.VarChar(255)
-//   telefone    String   @db.VarChar(255)
-//   endereco    String   @db.VarChar(255)
-// }
+model Fornecedor {
+  id          Int       @id @default(autoincrement())
+  email       String    @unique @db.VarChar(255)
+  senha       String    @db.VarChar(255)
+  nomeEmpresa String    @db.VarChar(255)
+  cnpj        String    @unique @db.VarChar(255)
+  telefone    String    @db.VarChar(255)
+  endereco    String    @db.VarChar(255)
+  produtos    Produto[]
+}
 
+model Produto {
+  id           Int        @id @default(autoincrement())
+  nome         String
+  descricao    String
+  preco        Float
+  imagensUrl   String[]
+  fornecedorId Int
+  fornecedor   Fornecedor @relation(fields: [fornecedorId], references: [id])
+}

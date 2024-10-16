@@ -12,16 +12,16 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UserService } from './user.service';
+import { CreateUserDto } from '@dtos/create-user.dto';
+import { AbstractUserRepository } from '@repositories/user/abstract-user.repository';
 
 import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateUserDto } from '@dtos/update-user.dto';
 
-@Controller('users')
-@ApiTags('users')
+@Controller('usuario')
+@ApiTags('usuario')
 export class UserController {
-  constructor(private repository: UserService) { }
+  constructor(private repository: AbstractUserRepository) {}
 
   @Get()
   async findAll() {
@@ -30,7 +30,7 @@ export class UserController {
   }
 
   @Get()
-  @HttpCode(HttpStatus.NOT_FOUND)
+  @HttpCode(HttpStatus.OK)
   async findUserUnique(@Headers('cpf') cpf: string) {
     const user = await this.repository.findUserUniqueCpf(cpf);
     if (!user) {
@@ -39,7 +39,7 @@ export class UserController {
     return user;
   }
 
-  @Post('Cadastrar-se') //todo colocar header para autenticação do usuario
+  @Post('cadastro') //todo colocar header para autenticação do usuario
   async create(@Body() user: CreateUserDto) {
     const newUser = await this.repository.create(user);
     return newUser;
@@ -47,7 +47,7 @@ export class UserController {
 
   @Patch(':id') //todo colocar header para autenticação do usuario
   async update(@Headers('id') id: string, @Body() user: UpdateUserDto) {
-    let updateUser = {}
+    let updateUser = {};
     const parsedId = parseInt(id, 10);
 
     if (isNaN(parsedId)) {
@@ -74,7 +74,6 @@ export class UserController {
     }
 
     try {
-
       const deleteResult = await this.repository.delete(parsedId);
       if (deleteResult.id === 0 || deleteResult.id === null) {
         throw new NotFoundException('Entity not found');
