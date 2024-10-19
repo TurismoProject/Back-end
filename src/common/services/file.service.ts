@@ -26,7 +26,7 @@ export class FileService {
 
   async deleteFile(url: string) {
     const bucket = this.bucketService.getBucket();
-    const fileName = url.split('/')[4].split('?')[0];
+    const fileName = url.split('/')[7].split('?')[0];
     const fileRef = ref(bucket, fileName);
 
     return await deleteObject(fileRef);

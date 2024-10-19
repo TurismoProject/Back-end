@@ -1,19 +1,20 @@
-import { IsEmail, IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { Decimal } from '@prisma/client/runtime/library';
+import { IsDecimal, IsNotEmpty, IsString, IsUUID } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
   @IsNotEmpty()
-  nome: string;
+  name: string;
 
   @IsString()
   @IsNotEmpty()
-  descricao: string;
+  description: string;
 
-  @IsNumber()
+  @IsDecimal()
   @IsNotEmpty()
-  preco: number;
+  price: Decimal;
 
-  @IsEmail()
+  @IsUUID()
   @IsNotEmpty()
-  emailProvedor: string;
+  supplierId: string;
 }
