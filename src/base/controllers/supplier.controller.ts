@@ -40,7 +40,7 @@ export class SupplierController {
   @Post('cadastro')
   @HttpCode(HttpStatus.CREATED)
   async createSupplier(
-    @Body(new PasswordHasherPipe()) body: CreateSupplierDto,
+    @Body(new PasswordHasherPipe()) body: CreateSupplierDto
   ) {
     console.log(body.password);
     const supplier = await this.repository.create(body);

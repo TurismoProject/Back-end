@@ -5,7 +5,7 @@ import { Product } from '@prisma/client';
 export abstract class AbstractProductsRepository {
   abstract create(
     product: CreateProductDto,
-    urls: Array<string>,
+    urls: Array<string>
   ): Promise<Product>;
   abstract findAll(): Promise<Array<Product>>;
   abstract findProductById(id: string): Promise<Product>;

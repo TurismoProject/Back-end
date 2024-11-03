@@ -7,6 +7,13 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Admin {
+  id          String @id @default(uuid())
+  email       String @unique @db.VarChar(255)
+  password    String @db.VarChar(255)
+  name        String @db.VarChar(255)
+}
+
 model User {
   id          String @id @default(uuid())
   email       String @unique @db.VarChar(255)
@@ -38,3 +45,13 @@ model Product {
   supplierId  String
   supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 }
+
+// model Fornecedor {
+//   id          Int      @id @default(autoincrement())
+//   email       String   @unique @db.VarChar(255)
+//   senha       String   @db.VarChar(255)
+//   nomeEmpresa String   @db.VarChar(255)
+//   cnpj        String   @unique @db.VarChar(255)
+//   telefone    String   @db.VarChar(255)
+//   endereco    String   @db.VarChar(255)
+// }

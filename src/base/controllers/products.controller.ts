@@ -20,7 +20,7 @@ import { AbstractProductsRepository } from '@repositories/products/abstract-prod
 export class ProductsController {
   constructor(
     private readonly bucketService: BucketService,
-    private readonly repository: AbstractProductsRepository,
+    private readonly repository: AbstractProductsRepository
   ) {}
 
   @Post('criar')
@@ -34,10 +34,10 @@ export class ProductsController {
           new FileTypeValidator({ fileType: '.(png|jpeg|jpg)' }),
         ],
       }),
-      FilesToURLPipe,
+      FilesToURLPipe
     )
     images: Array<string>,
-    @Body() body: CreateProductDto,
+    @Body() body: CreateProductDto
   ) {
     const createdProduct = await this.repository.create(body, images);
 

@@ -7,7 +7,7 @@ import {
 } from 'class-validator';
 
 export class CreateUserDto {
-  id: any;
+
   @IsNotEmpty()
   @IsEmail()
   email: string;
@@ -17,10 +17,10 @@ export class CreateUserDto {
     minLength: 6,
     minLowercase: 0,
   })
-  senha: string;
+  password: string;
 
   @IsString()
-  nome: string;
+  name: string;
 
   @IsNotEmpty()
   @IsString()
@@ -29,13 +29,14 @@ export class CreateUserDto {
 
   @IsDateString({ strict: true })
   @IsNotEmpty()
-  dataNascimento: string;
+  birthday: string;
 
   @IsNotEmpty()
   @IsString()
-  telefone: string;
+  phoneNumber: string;
 
   @IsNotEmpty()
   @IsString()
-  endereco: string;
+  address : string;
+
 }

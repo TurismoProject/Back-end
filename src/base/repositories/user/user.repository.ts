@@ -1,67 +1,147 @@
+import { PrismaService } from '@base/database/prisma/prisma.service';
+import { CreateUserDto } from '@dtos/create-user.dto';
+import { UpdateUserDto } from '@dtos/update-user.dto';
 import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
+  NotFoundException
 } from '@nestjs/common';
-import { PrismaService } from '@base/database/prisma/prisma.service';
-import { CreateUserDto } from '@dtos/create-user.dto';
-import { UpdateUserDto } from '@dtos/update-user.dto';
+import { User } from '@prisma/client';
 import { AbstractUserRepository } from './abstract-user.repository';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
-  constructor(private prismaService: PrismaService) {}
-
-  async create(user: CreateUserDto) {
-    const userExists = await this.prismaService.usuario.findFirst({
-      where: { cpf: user.cpf },
-    });
-    if (userExists) {
-      throw new ConflictException('User already exists');
-    }
-    const dataNascimento = new Date(user.dataNascimento);
-    const dataAtual = new Date();
-    const idade = dataAtual.getFullYear() - dataNascimento.getFullYear();
-    if (idade < 18) {
-      throw new BadRequestException('User must be at least 18 years old');
-    }
-    user.dataNascimento = dataNascimento.toISOString().split('T')[0];
-    return this.prismaService.usuario.create({ data: user });
-  }
-
-  async findAll() {
-    return this.prismaService.usuario.findMany();
-  }
-
-  async findUserById(id: number) {
-    return this.prismaService.usuario.findUnique({ where: { id } });
-  }
-
-  async findUserUniqueCpf(cpf: string) {
-    return this.prismaService.usuario.findFirstOrThrow({ where: { cpf } });
-  }
-
-  async update(user: UpdateUserDto) {
-    await this.userExists(user.id);
+  // eslint-disable-next-line prettier/prettier
+  constructor(private prismaService: PrismaService) { }
+  // eslint-disable-next-line prettier/prettier
+  async findFirstUser({ email, cpf }: { email?: string; cpf?: string }): Promise<User> {
     try {
-      return this.prismaService.usuario.update({
-        where: { id: user.id },
-        data: user as any,
+      const existingUser = await this.prismaService.user.findFirst({
+        where: {
+          OR: [
+            email ? { email } : undefined,
+            cpf ? { cpf } : undefined,
+          ],
+        },
       });
+      return existingUser;
     } catch (error) {
-      throw error;
+      throw new Error(
+        `Não foi possível verificar se o usuário já existe: ${error.message}`,
+      );
     }
   }
 
-  async delete(id: number) {
-    await this.userExists(id);
-    return this.prismaService.usuario.delete({ where: { id } });
+  async create(user: CreateUserDto): Promise<User> {
+    const userExists = await this.findFirstUser({
+      email: user.email,
+      cpf: user.cpf,
+    });
+  
+    await this.validateBirthDate(user.birthday);
+  
+    if (userExists) {
+      throw new ConflictException('Usuário já existe');
+    }
+  
+    const UserData = {
+      ...user,
+      birthday: new Date(user.birthday).toISOString().split('T')[0],
+    };
+
+    try {
+      const createdUser = await this.prismaService.user.create({
+        data: UserData,
+      });
+      return createdUser;
+    } catch (error) {
+      throw new BadRequestException(`Erro ao criar o usuário: ${error.message}`);
+    }
+  }
+  
+
+  private async validateBirthDate(birthDate: string): Promise<boolean> {
+    const date = new Date(birthDate);
+    let validateBirthUser = true;
+
+    if (isNaN(date.getTime())) {
+      validateBirthUser = false;
+      throw new BadRequestException('data de nascimento inválida');
+    }
+    const age = await this.calculateAge(date);
+    if (age < 18) {
+      validateBirthUser = false;
+      throw new BadRequestException('O usuário deve ter pelo menos 18 anos para se cadastrar!');
+    }
+    return Promise.resolve(validateBirthUser);
   }
 
-  async userExists(id: number) {
-    if (!(await this.findUserById(id))) {
-      throw new NotFoundException(`User ${id} não foi encontrado`);
+  private async calculateAge(birthDate: Date): Promise<number> {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    // eslint-disable-next-line prettier/prettier
+    const validBirth = monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate());
+    // eslint-disable-next-line prettier/prettier
+    if (validBirth) {
+      age--;
     }
+    return age;
+  }
+
+  async findAll(): Promise<User[]> {
+    try {
+        return await this.prismaService.user.findMany();
+    } catch (error) {
+        throw new Error(`Não foi possível buscar os usuários: ${error.message}`);
+    }
+}
+
+  async findById(id: string): Promise<User> {
+
+    const user = await this.prismaService.user.findUnique({
+        where: { id },
+    });
+    return user;
+  }
+
+  async updateUser(id: string, UserData: UpdateUserDto): Promise<User> {
+    const existingUser = await this.userExists(id);
+
+    if (existingUser) {
+        try {
+            const updatedUser = await this.prismaService.user.update({
+                where: { id: id },
+                data: UserData,
+            });
+            return updatedUser;
+        } catch (error) {
+            throw new BadRequestException(`Erro ao atualizar o cliente: ${error.message}`);
+        }
+    }
+}
+
+async deleteUser(id: string): Promise<User> {
+  const existingUser = await this.userExists(id);
+  if (existingUser) {
+      try {
+          const deleteUser = await this.prismaService.user.delete({ where: { id: id } });
+          return deleteUser;
+      } catch (error) {
+          throw new BadRequestException(`Erro ao deletar o cliente: ${error.message}`);
+      }
+  }
+}
+  async userExists(id: string): Promise<boolean> {
+    let validExistUser = false;
+    const userStatus = await this.findById(id);
+
+    if (userStatus) {
+      validExistUser = true;
+    } else {
+      throw new NotFoundException(`Usuário não existe`);
+    }
+    return validExistUser;
   }
 }

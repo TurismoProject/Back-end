@@ -15,7 +15,7 @@ import { AbstractProductsRepository } from '@repositories/products/abstract-prod
 export class SupplierRepository implements AbstractSupplierRepository {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly productRepository: AbstractProductsRepository,
+    private readonly productRepository: AbstractProductsRepository
   ) {}
 
   async create(data: CreateSupplierDto): Promise<Supplier> {
@@ -69,7 +69,7 @@ export class SupplierRepository implements AbstractSupplierRepository {
 
     if (!result)
       throw new InternalServerErrorException(
-        "Error deleting supplier's images",
+        "Error deleting supplier's images"
       );
 
     await this.prismaService.supplier.delete({ where: { id: uuid } });

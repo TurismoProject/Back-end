@@ -10,7 +10,7 @@ import { FileService } from '@services/file.service';
 export class ProductsRepository implements AbstractProductsRepository {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly fileService: FileService,
+    private readonly fileService: FileService
   ) {}
 
   async create(data: CreateProductDto, urls: Array<string>): Promise<Product> {
