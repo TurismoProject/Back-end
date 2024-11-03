@@ -1,15 +1,12 @@
 import {
+  // IsDate,
   IsEmail,
   IsNotEmpty,
   IsString,
   IsStrongPassword,
 } from 'class-validator';
 
-export class CreateSupplierDto {
-  @IsNotEmpty()
-  @IsString()
-  companyName: string;
-
+export class ClientUserDto {
   @IsNotEmpty()
   @IsEmail()
   email: string;
@@ -19,19 +16,25 @@ export class CreateSupplierDto {
     minLength: 6,
     minLowercase: 0,
   })
-  password: string;
+  senha: string;
+
+  @IsString()
+  nome: string;
 
   @IsNotEmpty()
   @IsString()
-  //Todo @IsCnpj() -> fazer decorator para o cnpj
-  cnpj: string;
+  //@IsCpf() -> fazer decorator para o cpf
+  cpf: string;
+
+  @IsString()
+  // @IsDate()
+  dataNascimento: string;
 
   @IsNotEmpty()
-  //Todo @IsPhoneNumber() -> fazer decorator para o telefone
   @IsString()
-  phoneNumber: string;
+  telefone: string;
 
   @IsNotEmpty()
   @IsString()
-  address: string;
+  endereco: string;
 }

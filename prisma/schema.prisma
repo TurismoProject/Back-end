@@ -1,3 +1,9 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,44 +13,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Admin {
-  id          String @id @default(uuid())
-  email       String @unique @db.VarChar(255)
-  password    String @db.VarChar(255)
-  name        String @db.VarChar(255)
-}
-
-model User {
-  id          String @id @default(uuid())
-  email       String @unique @db.VarChar(255)
-  password    String @db.VarChar(255)
-  name        String
-  cpf         String @db.VarChar(255)
-  birthday    String @db.VarChar(10)
-  phoneNumber String @db.VarChar(255)
-  address     String @db.VarChar(255)
-}
-
-model Supplier {
-  id          String    @id @default(uuid())
-  email       String    @unique @db.VarChar(255)
-  password    String    @db.VarChar(255)
-  companyName String    @db.VarChar(255)
-  cnpj        String    @unique @db.VarChar(255)
-  phoneNumber String    @db.VarChar(255)
-  address     String    @db.VarChar(255)
-  products    Product[]
-}
-
-model Product {
-  id          String   @id @default(uuid())
-  name        String
-  description String
-  price       Decimal
-  imagesUrl   String[]
-  supplierId  String
-  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-}
+// model Admin {
+//   id          Int          @id @default(autoincrement())
+//   email       String       @unique @db.VarChar(255)
+//   senha       String       @db.VarChar(255)
+//   nome        String
+// }
 
 // model Fornecedor {
 //   id          Int      @id @default(autoincrement())
@@ -55,3 +29,14 @@ model Product {
 //   telefone    String   @db.VarChar(255)
 //   endereco    String   @db.VarChar(255)
 // }
+
+model Cliente {
+  id             Int       @id @default(autoincrement())
+  email          String    @unique @db.VarChar(255)
+  senha          String    @db.VarChar(255)
+  nome           String?
+  cpf            String?    @db.VarChar(255)
+  dataNascimento String?    @db.VarChar(255)
+  telefone       String?    @db.VarChar(255)
+  endereco       String?    @db.VarChar(255)
+}
