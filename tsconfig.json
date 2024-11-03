@@ -10,17 +10,6 @@
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",
-    "paths": {
-      "@modules/*": ["src/base/modules/*"],
-      "@controllers/*": ["src/base/controllers/*"],
-      "@repositories/*": ["src/base/repositories/*"],
-      "@database/*": ["src/base/database/*"],
-      "@services/*": ["src/common/services/*"],
-      "@middlewares/*": ["src/common/middlewares/*"],
-      "@validators/*": ["src/common/validators/*"],
-      "@dtos/*": ["src/common/dtos/*"],
-      "@*": ["src/*"]
-    },
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
