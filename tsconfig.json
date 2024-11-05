@@ -19,6 +19,7 @@
       "@middlewares/*": ["src/common/middlewares/*"],
       "@validators/*": ["src/common/validators/*"],
       "@dtos/*": ["src/common/dtos/*"],
+      "@pipes/*": ["src/common/pipes/*"],
       "@*": ["src/*"]
     },
     "incremental": true,

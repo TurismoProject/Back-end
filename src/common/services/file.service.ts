@@ -9,7 +9,7 @@ import {
 
 @Injectable()
 export class FileService {
-  constructor(protected readonly bucketService: BucketService) {}
+  constructor(private readonly bucketService: BucketService) {}
 
   async uploadFile(file: Express.Multer.File) {
     const bucket = this.bucketService.getBucket();
@@ -30,5 +30,17 @@ export class FileService {
     const fileRef = ref(bucket, fileName);
 
     return await deleteObject(fileRef);
+  }
+
+  async fileExistsOnBucket(url: string) {
+    const bucket = this.bucketService.getBucket();
+    const fileName = url.split('/')[7].split('?')[0];
+    const fileRef = ref(bucket, fileName);
+    try {
+      const fileUrl = await getDownloadURL(fileRef);
+      return fileUrl === url;
+    } catch (e) {
+      return false;
+    }
   }
 }

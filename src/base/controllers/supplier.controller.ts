@@ -1,4 +1,4 @@
-import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
+import { PasswordHasherPipe } from '@pipes/password-hasher.pipe';
 import { CreateSupplierDto } from '@dtos/create-supplier.dto';
 import { UpdateSupplierDto } from '@dtos/update-supplier.dto';
 import {
