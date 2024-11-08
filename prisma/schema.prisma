@@ -8,21 +8,23 @@ datasource db {
 }
 
 model Admin {
-  id          String @id @default(uuid())
-  email       String @unique @db.VarChar(255)
-  password    String @db.VarChar(255)
-  name        String @db.VarChar(255)
+  id          String    @id @default(uuid())
+  email       String    @unique @db.VarChar(255)
+  password    String    @db.VarChar(255)
+  name        String    @db.VarChar(255)
+  role        String    @default("admin")
 }
 
 model User {
-  id          String @id @default(uuid())
-  email       String @unique @db.VarChar(255)
-  password    String @db.VarChar(255)
+  id          String    @id @default(uuid())
+  email       String    @unique @db.VarChar(255)
+  password    String    @db.VarChar(255)
   name        String
-  cpf         String @db.VarChar(255)
-  birthday    String @db.VarChar(10)
-  phoneNumber String @db.VarChar(255)
-  address     String @db.VarChar(255)
+  cpf         String    @db.VarChar(255)
+  birthday    String    @db.VarChar(10)
+  phoneNumber String    @db.VarChar(255)
+  address     String    @db.VarChar(255)
+  role        String    @default("user")
 }
 
 model Supplier {
@@ -34,6 +36,7 @@ model Supplier {
   phoneNumber String    @db.VarChar(255)
   address     String    @db.VarChar(255)
   products    Product[]
+  role        String    @default("supplier")
 }
 
 model Product {
