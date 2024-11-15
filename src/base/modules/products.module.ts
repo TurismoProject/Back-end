@@ -12,6 +12,7 @@ import { FileService } from '@services/file.service';
   providers: [
     FileService,
     { provide: AbstractProductsRepository, useClass: ProductsRepository },
+    { provide: 'Repository', useClass: ProductsRepository },
   ],
   exports: [AbstractProductsRepository],
 })

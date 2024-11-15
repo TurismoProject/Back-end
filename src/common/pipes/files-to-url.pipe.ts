@@ -1,11 +1,11 @@
-import { BucketService } from '@database/bucket/bucket.service';
 import {
   BadRequestException,
+  Injectable,
   mixin,
   PipeTransform,
   Type,
 } from '@nestjs/common';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { FileService } from '@services/file.service';
 
 interface FilesToURLPipeOptions {
   fileOptional: boolean;
@@ -14,11 +14,12 @@ interface FilesToURLPipeOptions {
 export function FilesToURLPipe(
   options: FilesToURLPipeOptions = { fileOptional: false },
 ): Type<PipeTransform> {
+  @Injectable()
   class MixinFilesToURLPipe
     implements
       PipeTransform<Array<Express.Multer.File>, Promise<Array<string>>>
   {
-    constructor(private bucketService: BucketService) {}
+    constructor(private fileService: FileService) {}
     async transform(value: Array<Express.Multer.File>) {
       if (!value && options.fileOptional) return [];
 
@@ -26,20 +27,7 @@ export function FilesToURLPipe(
 
       const urls = [];
       for (const file of value) {
-        const bucket = this.bucketService.getBucket();
-        const dateTime = new Date().getTime();
-        const fileName = `${dateTime}_${file.originalname}`;
-        const fileRef = ref(bucket, fileName);
-        const metadata = {
-          contentType: file.mimetype,
-        };
-
-        const result = await uploadBytesResumable(
-          fileRef,
-          file.buffer,
-          metadata,
-        );
-        const url = await getDownloadURL(result.ref);
+        const url = await this.fileService.uploadFile(file);
         urls.push(url);
       }
 

@@ -5,6 +5,7 @@ import { Product, Category } from '@prisma/client';
 import { CreateProductDto } from '@dtos/create-product.dto';
 import { UpdateProductDto } from '@dtos/update-product.dto';
 import { FileService } from '@services/file.service';
+import { Request } from 'express';
 
 @Injectable()
 export class ProductsRepository implements AbstractProductsRepository {
@@ -16,18 +17,28 @@ export class ProductsRepository implements AbstractProductsRepository {
   async update(
     product: UpdateProductDto,
     images: Array<string> = undefined,
+    req: Request = undefined,
   ): Promise<Product> {
     if (!images) {
       try {
-        const updatedProduct = await this.prismaService.product.update({
-          where: { id: product.id },
-          data: {
-            description: product.description,
-            name: product.name,
-            price: product.price,
-            imagesUrl: product.imagesUrl,
-          },
-        });
+        const updatedProduct = !product.imagesUrl
+          ? await this.prismaService.product.update({
+              where: { id: product.id },
+              data: {
+                description: product.description,
+                name: product.name,
+                price: product.price,
+              },
+            })
+          : await this.prismaService.product.update({
+              where: { id: product.id },
+              data: {
+                description: product.description,
+                name: product.name,
+                price: product.price,
+                imagesUrl: product.imagesUrl,
+              },
+            });
 
         return updatedProduct;
       } catch (error) {
@@ -36,16 +47,31 @@ export class ProductsRepository implements AbstractProductsRepository {
     }
 
     try {
-      const allImages = [...product.imagesUrl, ...images];
-      const updatedProduct = await this.prismaService.product.update({
-        where: { id: product.id },
-        data: {
-          description: product.description,
-          name: product.name,
-          price: product.price,
-          imagesUrl: allImages,
-        },
-      });
+      const repoUrls: Array<string> = req
+        ? req['repoUrls']
+          ? req['repoUrls']
+          : await this.getUrls(product.id)
+        : await this.getUrls(product.id);
+
+      const updatedProduct = !product.imagesUrl
+        ? await this.prismaService.product.update({
+            where: { id: product.id },
+            data: {
+              description: product.description,
+              name: product.name,
+              price: product.price,
+              imagesUrl: [...repoUrls, ...images],
+            },
+          })
+        : await this.prismaService.product.update({
+            where: { id: product.id },
+            data: {
+              description: product.description,
+              name: product.name,
+              price: product.price,
+              imagesUrl: [...product.imagesUrl, ...images],
+            },
+          });
 
       return updatedProduct;
     } catch (e) {
@@ -54,7 +80,7 @@ export class ProductsRepository implements AbstractProductsRepository {
   }
 
   async create(data: CreateProductDto, urls: Array<string>): Promise<Product> {
-    const { description, name, price, supplierId } = data;
+    const { description, name, price, supplierId, categories } = data;
     const supplier = await this.prismaService.supplier.findUnique({
       where: { id: supplierId },
     });
@@ -65,6 +91,7 @@ export class ProductsRepository implements AbstractProductsRepository {
       price,
       supplierId: supplier.id,
       imagesUrl: urls,
+      categories,
     };
 
     const createdProduct = await this.prismaService.product.create({
@@ -172,5 +199,36 @@ export class ProductsRepository implements AbstractProductsRepository {
     } catch (e) {
       return false;
     }
+  }
+
+  async getUrls(id: string): Promise<Array<string>> {
+    const product = await this.findProductById(id);
+    return product.imagesUrl;
+  }
+
+  async removeUrl(id: string, url: string | Array<string>): Promise<Product> {
+    if (Array.isArray(url)) {
+      url.map((img) => this.fileService.deleteFile(img));
+      const product = await this.findProductById(id);
+      const updatedProduct = await this.prismaService.product.update({
+        where: { id },
+        data: {
+          imagesUrl: product.imagesUrl.filter((img) => !url.includes(img)),
+        },
+      });
+
+      return updatedProduct;
+    }
+
+    this.fileService.deleteFile(url);
+    const product = await this.findProductById(id);
+    const updatedProduct = await this.prismaService.product.update({
+      where: { id },
+      data: {
+        imagesUrl: product.imagesUrl.filter((img) => img !== url),
+      },
+    });
+
+    return updatedProduct;
   }
 }

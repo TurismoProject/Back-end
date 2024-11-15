@@ -23,6 +23,9 @@ export abstract class AbstractProductsRepository {
     product: UpdateProductDto,
     images: Array<string>,
   ): Promise<Product>;
+  abstract update(product: UpdateProductDto): Promise<Product>;
   abstract deleteAllImagesBySupplierId(supplierId: string): Promise<boolean>;
+  abstract getUrls(id: string): Promise<Array<string>>;
+  abstract removeUrl(id: string, url: string | Array<string>): Promise<Product>;
   abstract delete(id: string): Promise<null>;
 }

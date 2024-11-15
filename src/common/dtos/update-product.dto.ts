@@ -1,13 +1,15 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { OmitType, PartialType } from '@nestjs/mapped-types';
 import { CreateProductDto } from './create-product.dto';
-import { IsArray, IsNotEmpty, IsUUID } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsUUID } from 'class-validator';
 
-export class UpdateProductDto extends PartialType(CreateProductDto) {
+export class UpdateProductDto extends PartialType(
+  OmitType(CreateProductDto, ['supplierId']),
+) {
   @IsUUID()
   @IsNotEmpty()
   id: string;
 
+  @IsOptional()
   @IsArray()
-  @IsNotEmpty()
-  imagesUrl: Array<string>;
+  imagesUrl?: Array<string>;
 }

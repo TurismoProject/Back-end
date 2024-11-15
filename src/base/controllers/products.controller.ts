@@ -1,4 +1,5 @@
-import { FilesToURLPipe } from '@common/pipes/files-to-url.pipe';
+import { FileCountInterceptor } from '@interceptors/file-count.interceptor';
+import { FilesToURLPipe } from '@pipes/files-to-url.pipe';
 import { CreateProductDto } from '@dtos/create-product.dto';
 import { UpdateProductDto } from '@dtos/update-product.dto';
 import {
@@ -10,13 +11,13 @@ import {
   UseInterceptors,
   HttpStatus,
   Patch,
-  ParseFilePipeBuilder,
   Delete,
   ParseUUIDPipe,
   Get,
   Query,
   Param,
   ParseIntPipe,
+  Req,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Category, Product } from '@prisma/client';
@@ -24,6 +25,8 @@ import { AbstractProductsRepository } from '@repositories/products/abstract-prod
 import { CategoryValidatorPipe } from '@validators/category.validator';
 import { FileSizeValidatorPipe } from '@validators/file-size.validator';
 import { FileTypeValidatorPipe } from '@validators/file-type.validator';
+import { StrangeLinkInterceptor } from '@interceptors/strange-link.interceptor';
+import { Request } from 'express';
 
 @Controller('produto')
 export class ProductsController {
@@ -51,20 +54,35 @@ export class ProductsController {
     };
   }
 
-  //TODO: Implementar a atualização de adição/posição de imagens
   @Patch('atualizar')
   @HttpCode(HttpStatus.OK)
-  @UseInterceptors(FilesInterceptor('images'))
+  @UseInterceptors(
+    FilesInterceptor('images'),
+    FileCountInterceptor({ maxCount: 5 }),
+    StrangeLinkInterceptor(),
+  )
   async update(
     @UploadedFiles(
       FileTypeValidatorPipe,
       new FileSizeValidatorPipe({ fileMaxSize: 5e6, imageMaxSize: 1e8 }),
-      FilesToURLPipe({ fileOptional: false }),
+      FilesToURLPipe({ fileOptional: true }),
     )
     images: Array<string>,
     @Body() body: UpdateProductDto,
+    @Req() req: Request,
   ) {
-    const updatedProduct = await this.repository.update(body, images);
+    const dbUrls: Array<string> = req['repoUrls'];
+
+    if (body.imagesUrl)
+      if (!dbUrls.every((url) => body.imagesUrl.includes(url)))
+        await this.repository.removeUrl(
+          body.id,
+          dbUrls.filter((url) => !body.imagesUrl.includes(url)),
+        );
+
+    const updatedProduct = images
+      ? await this.repository.update(body, images)
+      : await this.repository.update(body);
 
     return {
       name: updatedProduct.name,
@@ -89,7 +107,8 @@ export class ProductsController {
   async getProducts(
     @Query('categoria', CategoryValidatorPipe) category: Category,
     @Query('estrelas') rating: number,
-    @Query('limite', ParseIntPipe) productsLimit: number,
+    @Query('limite', new ParseIntPipe({ optional: true }))
+    productsLimit: number,
     @Query('min') minPrice: number,
     @Query('max') maxPrice: number,
   ) {
@@ -133,7 +152,8 @@ export class ProductsController {
     @Param('nome') name: string,
     @Query('categoria', CategoryValidatorPipe) category: Category,
     @Query('estrelas') rating: number,
-    @Query('limite') productsLimit: number,
+    @Query('limite', new ParseIntPipe({ optional: true }))
+    productsLimit: number,
     @Query('min') minPrice: number,
     @Query('max') maxPrice: number,
   ) {

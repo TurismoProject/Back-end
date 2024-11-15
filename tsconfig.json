@@ -20,6 +20,7 @@
       "@validators/*": ["src/common/validators/*"],
       "@dtos/*": ["src/common/dtos/*"],
       "@pipes/*": ["src/common/pipes/*"],
+      "@interceptors/*": ["src/common/interceptors/*"],
       "@*": ["src/*"]
     },
     "incremental": true,
