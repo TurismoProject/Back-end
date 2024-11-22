@@ -7,7 +7,13 @@ export abstract class AbstractUserRepository {
   abstract findAll(): Promise<User[]>;
   abstract findById(id: string): Promise<User>;
   // eslint-disable-next-line prettier/prettier
-  abstract findFirstUser({ email, cpf }: { email?: string; cpf?: string }): Promise<User>;
-  abstract updateUser(id: string,user: UpdateUserDto): Promise<User>;
+  abstract findFirstUser({
+    email,
+    cpf,
+  }: {
+    email?: string;
+    cpf?: string;
+  }): Promise<User>;
+  abstract updateUser(id: string, user: UpdateUserDto): Promise<User>;
   abstract deleteUser(id: string): Promise<User>;
 }

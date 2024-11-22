@@ -5,7 +5,7 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException
+  NotFoundException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { AbstractUserRepository } from './abstract-user.repository';
@@ -13,22 +13,25 @@ import { AbstractUserRepository } from './abstract-user.repository';
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
   // eslint-disable-next-line prettier/prettier
-  constructor(private prismaService: PrismaService) { }
+  constructor(private prismaService: PrismaService) {}
   // eslint-disable-next-line prettier/prettier
-  async findFirstUser({ email, cpf }: { email?: string; cpf?: string }): Promise<User> {
+  async findFirstUser({
+    email,
+    cpf,
+  }: {
+    email?: string;
+    cpf?: string;
+  }): Promise<User> {
     try {
       const existingUser = await this.prismaService.user.findFirst({
         where: {
-          OR: [
-            email ? { email } : undefined,
-            cpf ? { cpf } : undefined,
-          ],
+          OR: [email ? { email } : undefined, cpf ? { cpf } : undefined],
         },
       });
       return existingUser;
     } catch (error) {
       throw new Error(
-        `Não foi possível verificar se o usuário já existe: ${error.message}`,
+        `Não foi possível verificar se o usuário já existe: ${error.message}`
       );
     }
   }
@@ -38,13 +41,13 @@ export class UserRepository implements AbstractUserRepository {
       email: user.email,
       cpf: user.cpf,
     });
-  
+
     await this.validateBirthDate(user.birthday);
-  
+
     if (userExists) {
       throw new ConflictException('Usuário já existe');
     }
-  
+
     const UserData = {
       ...user,
       birthday: new Date(user.birthday).toISOString().split('T')[0],
@@ -56,10 +59,11 @@ export class UserRepository implements AbstractUserRepository {
       });
       return createdUser;
     } catch (error) {
-      throw new BadRequestException(`Erro ao criar o usuário: ${error.message}`);
+      throw new BadRequestException(
+        `Erro ao criar o usuário: ${error.message}`
+      );
     }
   }
-  
 
   private async validateBirthDate(birthDate: string): Promise<boolean> {
     const date = new Date(birthDate);
@@ -72,7 +76,9 @@ export class UserRepository implements AbstractUserRepository {
     const age = await this.calculateAge(date);
     if (age < 18) {
       validateBirthUser = false;
-      throw new BadRequestException('O usuário deve ter pelo menos 18 anos para se cadastrar!');
+      throw new BadRequestException(
+        'O usuário deve ter pelo menos 18 anos para se cadastrar!'
+      );
     }
     return Promise.resolve(validateBirthUser);
   }
@@ -82,7 +88,9 @@ export class UserRepository implements AbstractUserRepository {
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDifference = today.getMonth() - birthDate.getMonth();
     // eslint-disable-next-line prettier/prettier
-    const validBirth = monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate());
+    const validBirth =
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < birthDate.getDate());
     // eslint-disable-next-line prettier/prettier
     if (validBirth) {
       age--;
@@ -92,16 +100,16 @@ export class UserRepository implements AbstractUserRepository {
 
   async findAll(): Promise<User[]> {
     try {
-        return await this.prismaService.user.findMany();
+      const users = await this.prismaService.user.findMany();
+      return users;
     } catch (error) {
-        throw new Error(`Não foi possível buscar os usuários: ${error.message}`);
+      throw new Error(`Não foi possível buscar os usuários: ${error.message}`);
     }
-}
+  }
 
   async findById(id: string): Promise<User> {
-
     const user = await this.prismaService.user.findUnique({
-        where: { id },
+      where: { id },
     });
     return user;
   }
@@ -110,29 +118,36 @@ export class UserRepository implements AbstractUserRepository {
     const existingUser = await this.userExists(id);
 
     if (existingUser) {
-        try {
-            const updatedUser = await this.prismaService.user.update({
-                where: { id: id },
-                data: UserData,
-            });
-            return updatedUser;
-        } catch (error) {
-            throw new BadRequestException(`Erro ao atualizar o cliente: ${error.message}`);
-        }
-    }
-}
-
-async deleteUser(id: string): Promise<User> {
-  const existingUser = await this.userExists(id);
-  if (existingUser) {
       try {
-          const deleteUser = await this.prismaService.user.delete({ where: { id: id } });
-          return deleteUser;
+        const updatedUser = await this.prismaService.user.update({
+          where: { id: id },
+          data: UserData,
+        });
+        return updatedUser;
       } catch (error) {
-          throw new BadRequestException(`Erro ao deletar o cliente: ${error.message}`);
+        throw new BadRequestException(
+          `Erro ao atualizar o cliente: ${error.message}`
+        );
       }
+    }
   }
-}
+
+  async deleteUser(id: string): Promise<User> {
+    const existingUser = await this.userExists(id);
+    if (existingUser) {
+      try {
+        const deleteUser = await this.prismaService.user.delete({
+          where: { id: id },
+        });
+        return deleteUser;
+      } catch (error) {
+        throw new BadRequestException(
+          `Erro ao deletar o cliente: ${error.message}`
+        );
+      }
+    }
+  }
+
   async userExists(id: string): Promise<boolean> {
     let validExistUser = false;
     const userStatus = await this.findById(id);

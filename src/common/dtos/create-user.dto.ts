@@ -7,7 +7,6 @@ import {
 } from 'class-validator';
 
 export class CreateUserDto {
-
   @IsNotEmpty()
   @IsEmail()
   email: string;
@@ -37,6 +36,5 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   @IsString()
-  address : string;
-
+  address: string;
 }
