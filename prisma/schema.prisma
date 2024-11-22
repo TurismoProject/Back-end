@@ -7,37 +7,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  Admin
+  User
+  Supplier
+}
+
 model Admin {
-  id          String    @id @default(uuid())
-  email       String    @unique @db.VarChar(255)
-  password    String    @db.VarChar(255)
-  name        String    @db.VarChar(255)
-  role        String    @default("admin")
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  name     String
+  role     Role   @default(Admin)
 }
 
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique @db.VarChar(255)
-  password    String    @db.VarChar(255)
+  id          String @id @default(uuid())
+  email       String @unique
+  password    String
   name        String
-  cpf         String    @db.VarChar(255)
-  birthday    String    @db.VarChar(10)
-  phoneNumber String    @db.VarChar(255)
-  address     String    @db.VarChar(255)
-  role        String    @default("user")
+  cpf         String
+  birthday    String
+  phoneNumber String
+  address     String
+  role        Role   @default(User)
 }
 
 model Supplier {
-  id          String    @id @default(uuid())
-  email       String    @unique @db.VarChar(255)
-  password    String    @db.VarChar(255)
-  companyName String    @db.VarChar(255)
-  cnpj        String    @unique @db.VarChar(255)
-  phoneNumber String    @db.VarChar(255)
-  address     String    @db.VarChar(255)
+  id          String @id @default(uuid())
+  email       String @unique
+  password    String
+  companyName String
+  cnpj        String @unique
+  phoneNumber String
+  address     String
+  role        Role   @default(Supplier)
   products    Product[]
-  role        String    @default("supplier")
 }
+
 
 model Product {
   id          String   @id @default(uuid())
