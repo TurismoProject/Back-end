@@ -75,7 +75,7 @@ export class AuthService {
     return token;
   }
 
-  private async generateTokens(user: any, model: string) {
+  public async generateTokens(user: any, model: string) {
     const accessToken = this.generateJwtToken(user, model, '15m');
     const refreshToken = this.generateJwtToken(user, model, '7d'); //Todo -> fazer funcao para tratamento do refreshToken e adcionar tabela para os tokens
 

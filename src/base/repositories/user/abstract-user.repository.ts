@@ -1,9 +1,11 @@
+import { AuthModel } from '@common/models/auth.model';
 import { CreateUserDto } from '@dtos/create-user.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
 import { User } from '@prisma/client';
 
 export abstract class AbstractUserRepository {
   abstract create(user: CreateUserDto): Promise<User>;
+  abstract login(email: string, password: string): Promise<AuthModel>;
   abstract findAll(): Promise<User[]>;
   abstract findById(id: string): Promise<User>;
   // eslint-disable-next-line prettier/prettier

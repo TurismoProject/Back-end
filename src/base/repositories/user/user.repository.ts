@@ -1,4 +1,5 @@
 import { PrismaService } from '@base/database/prisma/prisma.service';
+import { AuthService } from '@services/auth.service';
 import { CreateUserDto } from '@dtos/create-user.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
 import {
@@ -9,11 +10,32 @@ import {
 } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { AbstractUserRepository } from './abstract-user.repository';
+import { AuthModel } from '@common/models/auth.model';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
   // eslint-disable-next-line prettier/prettier
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private AuthService: AuthService
+  ) {}
+
+  async login(email: string, password: string): Promise<AuthModel> {
+    const { user, model } = await this.AuthService.validateUser(
+      email,
+      password
+    );
+
+    const token = await this.AuthService.generateTokens(user, model);
+
+    const authData: AuthModel = {
+      acessToken: token.accessToken,
+      refreshToken: token.refreshToken,
+    };
+
+    return authData;
+  }
+
   // eslint-disable-next-line prettier/prettier
   async findFirstUser({
     email,
