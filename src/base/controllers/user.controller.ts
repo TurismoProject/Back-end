@@ -1,5 +1,8 @@
+import { LocalAuthGuard } from '@common/guards/auth.guard';
+import { AuthModel } from '@common/models/auth.model';
 import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { CreateUserDto } from '@dtos/create-user.dto';
+import { LoginDto } from '@dtos/login.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
 import {
   Body,
@@ -10,15 +13,18 @@ import {
   Param,
   Patch,
   Post,
+  Put,
+  UseGuards,
   UsePipes,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { User } from '@prisma/client';
 import { AbstractUserRepository } from '@repositories/user/abstract-user.repository';
 
 @Controller('usuario')
 @ApiTags('usuario')
 export class UserController {
-  constructor(private repository: AbstractUserRepository) {}
+  constructor(private repository: AbstractUserRepository) { }
 
   @Post('cadastro')
   @UsePipes(new PasswordHasherPipe<CreateUserDto>())
@@ -27,25 +33,33 @@ export class UserController {
     return newUser;
   }
 
-  @Patch('atualizar/:id')
-  @UsePipes(new PasswordHasherPipe<CreateUserDto>())
-  async update(@Headers('id') id: string, @Body() user: UpdateUserDto) {
+  @Post('login')
+  @UseGuards(LocalAuthGuard)
+  async login(@Body() user: LoginDto) {
+    const logIn: AuthModel = await this.repository.login(user.email, user.password);
+    return logIn;
+  }
+
+  // @UseGuards(LocalAuthGuard)
+  @Put('atualizar/:id')
+  @UsePipes(new PasswordHasherPipe<User>())
+  async update(@Param('id') id: string, @Body() user: UpdateUserDto) {
     const updatedUserData = await this.repository.updateUser(id, user);
     return { message: 'Usuário Atualizado com Sucesso', updatedUserData };
   }
 
   @Get('buscar/:id')
-  @UsePipes(new PasswordHasherPipe<CreateUserDto>())
+  @UsePipes(new PasswordHasherPipe<User>())
   async getUser(@Param('id') id: string) {
     const UserData = await this.repository.findById(id);
     return { message: ` Usuário encontrado com Sucesso`, UserData };
   }
 
   @Delete('excluir/:id')
-  @UsePipes(new PasswordHasherPipe<CreateUserDto>())
+  @UsePipes(new PasswordHasherPipe<User>())
   async deleteUser(@Param('id') id: string) {
     const deleteUser = await this.repository.deleteUser(id);
-    return { message: `Usuário ${deleteUser.name} foi removido com sucesso.` };
+    return { message: `Usuário ${deleteUser.name} foi removido com sucesso.`, deleteUser };
   }
 
   @Get('buscar/todos')

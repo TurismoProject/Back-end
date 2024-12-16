@@ -8,6 +8,7 @@ export abstract class AbstractUserRepository {
   abstract login(email: string, password: string): Promise<AuthModel>;
   abstract findAll(): Promise<User[]>;
   abstract findById(id: string): Promise<User>;
+  abstract findByEmail(email: string): Promise<User>;
   // eslint-disable-next-line prettier/prettier
   abstract findFirstUser({
     email,

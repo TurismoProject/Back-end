@@ -8,92 +8,79 @@ import { CreateAdminDto } from '@dtos/create-admin.dto';
 import { CreateSupplierDto } from '@dtos/create-supplier.dto';
 import { AbstractAdminRepository } from '@repositories/admin/abstract-admin.repository';
 import { AbstractSupplierRepository } from '@repositories/suppliers/abstract-supplier.repository';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
+
+  private static readonly errorMessage: string = 'Email e/ou senha inválidos';
+
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-    private userService: AbstractUserRepository,
-    private adminService: AbstractAdminRepository,
-    private supplierService: AbstractSupplierRepository
-  ) {}
-
-  async register(
-    user: CreateUserDto | CreateAdminDto | CreateSupplierDto,
-    userRole: string
-  ) {
-    let createdUser: any;
-
-    if (userRole === 'admin') {
-      createdUser = await this.adminService.createAdmin(user as CreateAdminDto);
-    } else if (userRole === 'supplier') {
-      createdUser = await this.supplierService.create(
-        user as CreateSupplierDto
-      );
-    } else {
-      createdUser = await this.userService.create(user as CreateUserDto);
-    }
-
-    const token = this.generateTokens(createdUser, userRole);
-    return { token, user: createdUser };
-  }
-
-  async login(email: string, password: string) {
-    const { user, model } = await this.validateUser(email, password);
-    const token = this.generateTokens(user, model);
-    return { token };
-  }
-
-  private async findUserByEmail(email: string) {
-    const models = ['admin', 'user', 'supplier'];
-
-    for (const model of models) {
-      const user = await this.prisma[model].findUnique({
-        where: { email },
-      });
-
-      if (user) {
-        return { user, model };
-      }
-    }
-  }
+    private userRepository: AbstractUserRepository,
+    private adminRepository: AbstractAdminRepository,
+    // private supplierService: AbstractSupplierRepository
+  ) { }
 
   private generateJwtToken(
     user: any,
-    model: string,
     expiration: string = '15m'
   ) {
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role?.name,
-      model: model,
     };
 
     const token = this.jwtService.sign(payload, { expiresIn: expiration });
     return token;
   }
 
-  public async generateTokens(user: any, model: string) {
-    const accessToken = this.generateJwtToken(user, model, '15m');
-    const refreshToken = this.generateJwtToken(user, model, '7d'); //Todo -> fazer funcao para tratamento do refreshToken e adcionar tabela para os tokens
+  private async generateRefreshToken(user: any, expiration: string = '7d') {
+    const token = this.generateJwtToken(user, '7d');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7);
 
-    return { accessToken, refreshToken };
+    // await this.prisma.refreshToken.create({
+    //   data: {
+    //     token,
+    //     userId: user.id,
+    //     expiresAt,
+    //   },
+    // });
+
+    return token;
   }
 
-  async validateUser(email: string, password: string): Promise<any> {
-    const errorMessage = 'Email e/ou senha inválidos';
-    const findUser = await this.findUserByEmail(email);
-    if (!findUser) {
-      throw new Error(errorMessage);
-    }
+  public async generateTokens(user: any) {
+    const accessToken = this.generateJwtToken(user, '15m');
+    const refreshToken = this.generateRefreshToken(user, '1d',);
+    const tokens = {
+      accessToken,
+      refreshToken,
+    };
 
-    const { user, model } = findUser;
-    const isValidUser = await bcrypt.compare(password, user.password);
-    if (!isValidUser) {
-      throw new Error(errorMessage);
+    return tokens;
+  }
+
+  async validateUser(email: string, password: string): Promise<User> {
+    const findedUser = await this.userRepository.findByEmail(email);
+    if (!findedUser) {
+      throw new Error(AuthService.errorMessage);
     }
-    return { user, model };
+    const isValidUser = await bcrypt.compare(password, findedUser.password);
+    if (!isValidUser) {
+      throw new Error(AuthService.errorMessage);
+    }
+    return findedUser;
+  }
+
+  async validateAdmin(email: string, password: string): Promise<any> {
+    const findedAdmin = await this.adminRepository.findByEmail(email);
+    if (!findedAdmin) {
+      throw new Error(AuthService.errorMessage);
+    }
+    return findedAdmin;
   }
 }

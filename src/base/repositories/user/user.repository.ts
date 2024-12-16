@@ -5,6 +5,8 @@ import { UpdateUserDto } from '@dtos/update-user.dto';
 import {
   BadRequestException,
   ConflictException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -17,20 +19,22 @@ export class UserRepository implements AbstractUserRepository {
   // eslint-disable-next-line prettier/prettier
   constructor(
     private prismaService: PrismaService,
-    private AuthService: AuthService
-  ) {}
+    @Inject(forwardRef(() => AuthService))
+    private readonly AuthService: AuthService,
+  ) { }
 
   async login(email: string, password: string): Promise<AuthModel> {
-    const { user, model } = await this.AuthService.validateUser(
+
+    const isValidUser = await this.AuthService.validateUser(
       email,
       password
     );
 
-    const token = await this.AuthService.generateTokens(user, model);
+    const token = await this.AuthService.generateTokens(isValidUser);
 
     const authData: AuthModel = {
       acessToken: token.accessToken,
-      refreshToken: token.refreshToken,
+      refreshToken: "" /*token.refreshToken*/,
     };
 
     return authData;
@@ -133,6 +137,17 @@ export class UserRepository implements AbstractUserRepository {
     const user = await this.prismaService.user.findUnique({
       where: { id },
     });
+    return user;
+  }
+
+  async findByEmail(email: string): Promise<User> {
+    const user = await this.prismaService.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
     return user;
   }
 

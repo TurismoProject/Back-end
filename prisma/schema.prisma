@@ -56,12 +56,13 @@ model Product {
   supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 }
 
-// model Fornecedor {
-//   id          Int      @id @default(autoincrement())
-//   email       String   @unique @db.VarChar(255)
-//   senha       String   @db.VarChar(255)
-//   nomeEmpresa String   @db.VarChar(255)
-//   cnpj        String   @unique @db.VarChar(255)
-//   telefone    String   @db.VarChar(255)
-//   endereco    String   @db.VarChar(255)
-// }
+model Authenticate {
+  id        String   @id @default(uuid()) 
+  token     String   @unique              
+  userId    String                        
+  userType  Role                          
+  expiresAt DateTime                      
+  createdAt DateTime @default(now())      
+  updatedAt DateTime @updatedAt           
+}
+

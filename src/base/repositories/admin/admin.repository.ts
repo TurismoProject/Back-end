@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -9,10 +11,16 @@ import { CreateAdminDto } from '@dtos/create-admin.dto';
 import { UpdateAdminDto } from '@dtos/update-admin.dto';
 import { Admin } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { AuthModel } from '@common/models/auth.model';
+import { AuthService } from '@services/auth.service';
 
 @Injectable()
 export class AdminRepository implements AbstractAdminRepository {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    @Inject(forwardRef(() => AuthService))
+    private readonly AuthService: AuthService,
+  ) { }
 
   async createAdmin(userAdmin: CreateAdminDto): Promise<Admin> {
     const adminExists = this.findFirstUser({
@@ -36,6 +44,23 @@ export class AdminRepository implements AbstractAdminRepository {
     return;
   }
 
+  async login(email: string, password: string): Promise<AuthModel> {
+
+    const isValidUser = await this.AuthService.validateAdmin(
+      email,
+      password
+    );
+
+    const token = await this.AuthService.generateTokens(isValidUser);
+
+    const authData: AuthModel = {
+      acessToken: token.accessToken,
+      refreshToken: "" /*token.refreshToken*/,
+    };
+
+    return authData;
+  }
+
   async findAll(): Promise<Admin[]> {
     try {
       const usersAdmin = await this.prismaService.admin.findMany({
@@ -49,6 +74,17 @@ export class AdminRepository implements AbstractAdminRepository {
         `Não foi possível buscar os usuários administradores: ${error.message}`
       );
     }
+  }
+
+  async findByEmail(email: string): Promise<Admin> {
+    const admin = await this.prismaService.admin.findUnique({
+      where: { email },
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+    return admin;
   }
 
   async findById(id: string): Promise<Admin> {
