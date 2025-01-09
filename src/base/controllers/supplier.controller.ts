@@ -48,6 +48,7 @@ export class SupplierController {
     return {
       companyName: supplier.companyName,
       email: supplier.email,
+      supplierId: supplier.id,
     };
   }
 

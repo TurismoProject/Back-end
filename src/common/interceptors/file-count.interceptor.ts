@@ -8,12 +8,12 @@ import {
   NestInterceptor,
   Type,
 } from '@nestjs/common';
+import { ProductImagesPosition } from '@prisma/client';
 import { isUUID } from 'class-validator';
 import { Request } from 'express';
-import { tap } from 'rxjs';
 
 abstract class RepositoryTemplate {
-  abstract getUrls(id: string): Promise<Array<string>>;
+  abstract getHowManyFiles(id: string): Promise<Array<ProductImagesPosition>>;
 }
 
 class RequestBodyTemplate {
@@ -36,23 +36,15 @@ export function FileCountInterceptor<
 
         if (!isUUID(id)) throw new BadRequestException('Invalid id');
 
-        const dbUrls = await this.repository.getUrls(id);
+        const filesArray = await this.repository.getHowManyFiles(id);
         const filesCount = Array.isArray(request.files)
           ? request.files.length
           : 0;
-        if (dbUrls.length + filesCount > options.maxCount) {
+        if (filesArray.length + filesCount > options.maxCount) {
           throw new BadRequestException('Max file count exceeded');
         }
 
-        request['repoUrls'] = dbUrls;
-        request['verifiedId'] = true;
-
-        return next.handle().pipe(
-          tap(() => {
-            delete request['repoUrls'];
-            delete request['verifiedId'];
-          }),
-        );
+        return next.handle();
       }
 
       return next.handle();

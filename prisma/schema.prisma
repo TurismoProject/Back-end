@@ -33,16 +33,25 @@ model Supplier {
 }
 
 model Product {
-  id          String          @id @default(uuid())
-  name        String
-  description String
-  price       Decimal
-  rating      Decimal         @default(0)
-  categories  Category[]
-  imagesUrl   String[]
-  supplierId  String
-  supplier    Supplier        @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  reviews     ProductReview[]
+  id              String                  @id @default(uuid())
+  name            String
+  description     String
+  price           Decimal
+  rating          Decimal                 @default(0)
+  categories      Category[]
+  bucketName      String
+  imagesPositions ProductImagesPosition[]
+  supplierId      String
+  supplier        Supplier                @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  reviews         ProductReview[]
+}
+
+model ProductImagesPosition {
+  id        String  @id @default(uuid())
+  position  Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  imageName String
 }
 
 model ProductReview {

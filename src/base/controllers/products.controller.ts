@@ -1,5 +1,4 @@
 import { FileCountInterceptor } from '@interceptors/file-count.interceptor';
-import { FilesToURLPipe } from '@pipes/files-to-url.pipe';
 import { CreateProductDto } from '@dtos/create-product.dto';
 import { UpdateProductDto } from '@dtos/update-product.dto';
 import {
@@ -10,14 +9,14 @@ import {
   UploadedFiles,
   UseInterceptors,
   HttpStatus,
-  Patch,
   Delete,
   ParseUUIDPipe,
   Get,
   Query,
   Param,
   ParseIntPipe,
-  Req,
+  Put,
+  Headers,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Category, Product } from '@prisma/client';
@@ -25,8 +24,6 @@ import { AbstractProductsRepository } from '@repositories/products/abstract-prod
 import { CategoryValidatorPipe } from '@validators/category.validator';
 import { FileSizeValidatorPipe } from '@validators/file-size.validator';
 import { FileTypeValidatorPipe } from '@validators/file-type.validator';
-import { StrangeLinkInterceptor } from '@interceptors/strange-link.interceptor';
-import { Request } from 'express';
 
 @Controller('produto')
 export class ProductsController {
@@ -34,75 +31,79 @@ export class ProductsController {
 
   @Post('criar')
   @HttpCode(HttpStatus.CREATED)
-  @UseInterceptors(FilesInterceptor('images', 5))
-  async create(
-    @UploadedFiles(
-      FileTypeValidatorPipe,
-      new FileSizeValidatorPipe({ fileMaxSize: 5e6, imageMaxSize: 1e8 }),
-      FilesToURLPipe({ fileOptional: true }),
-    )
-    images: Array<string>,
-    @Body() body: CreateProductDto,
-  ) {
-    const createdProduct = await this.repository.create(body, images);
+  async createProduct(@Body() body: CreateProductDto) {
+    const createdProduct = await this.repository.create(body);
 
     return {
       name: createdProduct.name,
       description: createdProduct.description,
       price: createdProduct.price.toNumber(),
-      images: createdProduct.imagesUrl,
+      productId: createdProduct.id,
     };
   }
 
-  @Patch('atualizar')
-  @HttpCode(HttpStatus.OK)
+  @Post('adicionar-imagem')
   @UseInterceptors(
-    FilesInterceptor('images'),
+    FilesInterceptor('images', 5),
     FileCountInterceptor({ maxCount: 5 }),
-    StrangeLinkInterceptor(),
   )
-  async update(
+  async addImage(
     @UploadedFiles(
       FileTypeValidatorPipe,
       new FileSizeValidatorPipe({ fileMaxSize: 5e6, imageMaxSize: 1e8 }),
-      FilesToURLPipe({ fileOptional: true }),
     )
-    images: Array<string>,
-    @Body() body: UpdateProductDto,
-    @Req() req: Request,
+    images: Array<Express.Multer.File>,
+    @Body('id', new ParseUUIDPipe()) productId: string,
+    @Body('position', new ParseIntPipe({ optional: true })) position?: number,
   ) {
-    const dbUrls: Array<string> = req['repoUrls'];
+    let imagesPositionsArray: Array<string> = [];
+    for (let i = 1; i <= images.length; i++) {
+      const fileName = await this.repository.addImageToProduct(
+        productId,
+        images[i - 1],
+        position ? position + i : i,
+      );
+      imagesPositionsArray.push(fileName);
+    }
 
-    if (body.imagesUrl)
-      if (!dbUrls.every((url) => body.imagesUrl.includes(url)))
-        await this.repository.removeUrl(
-          body.id,
-          dbUrls.filter((url) => !body.imagesUrl.includes(url)),
-        );
+    return imagesPositionsArray;
+  }
 
-    const updatedProduct = images
-      ? await this.repository.update(body, images)
-      : await this.repository.update(body);
+  @Put('atualizar')
+  @HttpCode(HttpStatus.OK)
+  async updateProduct(@Body() body: UpdateProductDto) {
+    const updatedProduct = await this.repository.updateProduct(body);
 
     return {
       name: updatedProduct.name,
       description: updatedProduct.description,
       price: updatedProduct.price,
-      images: updatedProduct.imagesUrl,
     };
+  }
+
+  @Put('atualizar-imagens')
+  @HttpCode(HttpStatus.OK)
+  async updateImagesPosition(
+    @Body('id', new ParseUUIDPipe()) productId: string,
+    @Body('imagesPositions') imagesPositionsArray: Array<string>,
+  ) {
+    await this.repository.updateProductImagePosition(
+      productId,
+      imagesPositionsArray,
+    );
   }
 
   @Delete('excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@Body('uuid', new ParseUUIDPipe()) uuid: string) {
-    await this.repository.delete(uuid);
+    await this.repository.deleteProduct(uuid);
 
     return {
       message: 'Produto excluído com sucesso!',
     };
   }
 
-  @Get()
+  @Get('busca')
   @HttpCode(HttpStatus.OK)
   async getProducts(
     @Query('categoria', CategoryValidatorPipe) category: Category,
@@ -127,7 +128,7 @@ export class ProductsController {
           name: string;
           description: string;
           price: number;
-          images: string[];
+          id: string;
         }[],
         product: Product,
       ) => {
@@ -135,7 +136,7 @@ export class ProductsController {
           name: product.name,
           description: product.description,
           price: product.price.toNumber(),
-          images: product.imagesUrl,
+          id: product.id,
         });
 
         return acc;
@@ -146,7 +147,7 @@ export class ProductsController {
     return products;
   }
 
-  @Get(':nome')
+  @Get('busca/:nome')
   @HttpCode(HttpStatus.OK)
   async searchProducts(
     @Param('nome') name: string,
@@ -172,7 +173,7 @@ export class ProductsController {
           name: string;
           description: string;
           price: number;
-          images: string[];
+          id: string;
         }[],
         product: Product,
       ) => {
@@ -180,7 +181,7 @@ export class ProductsController {
           name: product.name,
           description: product.description,
           price: product.price.toNumber(),
-          images: product.imagesUrl,
+          id: product.id,
         });
 
         return acc;
@@ -189,5 +190,12 @@ export class ProductsController {
     );
 
     return products;
+  }
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  async getProduct(@Headers('uuid') uuid: string) {
+    const product = await this.repository.findProductById(uuid);
+    return product;
   }
 }
