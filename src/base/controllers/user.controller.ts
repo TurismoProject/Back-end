@@ -1,5 +1,6 @@
 import { LocalAuthGuard } from '@common/guards/auth.guard';
 import { AuthModel } from '@common/models/auth.model';
+import { CpfMaskPipe } from '@common/pipes/cpf-format.pipe';
 import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { CreateUserDto } from '@dtos/create-user.dto';
 import { LoginDto } from '@dtos/login.dto';
@@ -27,7 +28,7 @@ export class UserController {
   constructor(private repository: AbstractUserRepository) { }
 
   @Post('cadastro')
-  @UsePipes(new PasswordHasherPipe<CreateUserDto>())
+  @UsePipes(new PasswordHasherPipe<CreateUserDto>(), CpfMaskPipe)
   async create(@Body() user: CreateUserDto) {
     const newUser = await this.repository.create(user);
     return newUser;
@@ -42,6 +43,7 @@ export class UserController {
 
   // @UseGuards(LocalAuthGuard)
   @Put('atualizar/:id')
+  @UseGuards(LocalAuthGuard)
   @UsePipes(new PasswordHasherPipe<User>())
   async update(@Param('id') id: string, @Body() user: UpdateUserDto) {
     const updatedUserData = await this.repository.updateUser(id, user);
@@ -56,6 +58,7 @@ export class UserController {
   }
 
   @Delete('excluir/:id')
+  @UseGuards(LocalAuthGuard)
   @UsePipes(new PasswordHasherPipe<User>())
   async deleteUser(@Param('id') id: string) {
     const deleteUser = await this.repository.deleteUser(id);
@@ -63,6 +66,7 @@ export class UserController {
   }
 
   @Get('buscar/todos')
+  @UseGuards(LocalAuthGuard)
   async findAll() {
     const allUsers = await this.repository.findAll();
     return allUsers;

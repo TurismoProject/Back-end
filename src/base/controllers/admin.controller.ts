@@ -1,5 +1,6 @@
 import { LocalAuthGuard } from '@common/guards/auth.guard';
 import { AuthModel } from '@common/models/auth.model';
+import { UserAuthentication } from '@common/models/user-authenticate.model';
 import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { CreateAdminDto } from '@dtos/create-admin.dto';
 import { LoginDto } from '@dtos/login.dto';
@@ -21,7 +22,7 @@ export class AdminController {
 
   @Post('cadastro')
   @UsePipes(new PasswordHasherPipe<CreateAdminDto>())
-  async createAdmin(@Body() admin: CreateAdminDto): Promise<Admin> {
+  async createAdmin(@Body() admin: CreateAdminDto): Promise<UserAuthentication> {
     const createdAdmin = await this.repository.createAdmin(admin);
     return createdAdmin;
   }
