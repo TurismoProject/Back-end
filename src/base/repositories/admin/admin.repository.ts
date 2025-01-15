@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   forwardRef,
   Inject,
   Injectable,
@@ -13,6 +14,7 @@ import { Admin } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { AuthModel } from '@common/models/auth.model';
 import { AuthService } from '@services/auth.service';
+import { UserAuthentication } from '@common/models/user-authenticate.model';
 
 @Injectable()
 export class AdminRepository implements AbstractAdminRepository {
@@ -22,26 +24,44 @@ export class AdminRepository implements AbstractAdminRepository {
     private readonly AuthService: AuthService,
   ) { }
 
-  async createAdmin(userAdmin: CreateAdminDto): Promise<Admin> {
-    const adminExists = this.findFirstUser({
+  async createAdmin(userAdmin: CreateAdminDto): Promise<UserAuthentication> {
+    const adminExists = await this.findFirstAdmin({
       email: userAdmin.email,
       name: userAdmin.name,
     });
 
     if (adminExists) {
-      try {
-        const adminCreate = await this.prismaService.admin.create({
-          data: userAdmin,
-        });
-        return adminCreate;
-      } catch (error) {
-        throw new BadRequestException(
-          `Erro ao criar o admin: ${error.message}`
-        );
-      }
+      throw new ConflictException('Usuário já existe');
     }
 
-    return;
+    try {
+      const adminCreate = await this.prismaService.admin.create({
+        data: userAdmin,
+      });
+      const token = await this.AuthService.generateTokens(adminCreate);
+      const authData: AuthModel = {
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+      };
+
+      const admin = {
+        id: adminCreate.id,
+        email: adminCreate.email,
+        name: adminCreate.name,
+        password: adminCreate.password,
+      }
+      const createAdminAndAuthenticate: UserAuthentication = {
+        user: admin,
+        autheticate: authData,
+      };
+
+      return createAdminAndAuthenticate;
+
+    } catch (error) {
+      throw new BadRequestException(
+        `Erro ao criar o admin: ${error.message}`,
+      );
+    }
   }
 
   async login(email: string, password: string): Promise<AuthModel> {
@@ -54,8 +74,8 @@ export class AdminRepository implements AbstractAdminRepository {
     const token = await this.AuthService.generateTokens(isValidUser);
 
     const authData: AuthModel = {
-      acessToken: token.accessToken,
-      refreshToken: "" /*token.refreshToken*/,
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
     };
 
     return authData;
@@ -104,26 +124,30 @@ export class AdminRepository implements AbstractAdminRepository {
     return userAdmin;
   }
 
-  private async findFirstUser({
+  private async findFirstAdmin({
     email,
     name,
   }: {
     email?: string;
     name?: string;
-  }): Promise<Admin> {
+  }): Promise<Admin | null> {
     try {
-      const existingUser = await this.prismaService.user.findFirst({
+      const existingAdmin = await this.prismaService.admin.findFirst({
         where: {
-          OR: [email ? { email } : undefined, name ? { name } : undefined],
+          OR: [
+            email ? { email } : undefined,
+            name ? { name } : undefined
+          ],
         },
       });
-      return existingUser;
+      return existingAdmin;
     } catch (error) {
       throw new Error(
-        `Não foi possível verificar se o usuário já existe: ${error.message}`
+        `Não foi possível verificar se o administrador já existe: ${error.message}`
       );
     }
   }
+
 
   private async userExists(id: string): Promise<boolean> {
     let validExistUser = false;

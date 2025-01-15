@@ -8,7 +8,10 @@ import { CreateAdminDto } from '@dtos/create-admin.dto';
 import { CreateSupplierDto } from '@dtos/create-supplier.dto';
 import { AbstractAdminRepository } from '@repositories/admin/abstract-admin.repository';
 import { AbstractSupplierRepository } from '@repositories/suppliers/abstract-supplier.repository';
-import { User } from '@prisma/client';
+import { Admin, Supplier, User } from '@prisma/client';
+import { error } from 'console';
+import { AuthModel } from '@common/models/auth.model';
+import { Role } from '@common/enums/role.enum';
 
 @Injectable()
 export class AuthService {
@@ -36,29 +39,100 @@ export class AuthService {
     const token = this.jwtService.sign(payload, { expiresIn: expiration });
     return token;
   }
+  private async generateUserRefreshToken(user: User, expiration: string = '7d'): Promise<string> {
+    const token = this.generateJwtToken(user, expiration);
+    const expirationDays = parseInt(expiration.replace(/\D/g, ''));
 
-  private async generateRefreshToken(user: any, expiration: string = '7d') {
-    const token = this.generateJwtToken(user, '7d');
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
+    expiresAt.setDate(expiresAt.getDate() + expirationDays);
 
-    // await this.prisma.refreshToken.create({
-    //   data: {
-    //     token,
-    //     userId: user.id,
-    //     expiresAt,
-    //   },
-    // });
+    try {
+      await this.prisma.authenticate.upsert({
+        where: { userId: user.id },
+        update: {
+          token,
+          expiresAt,
+        },
+        create: {
+          token,
+          userId: user.id,
+          expiresAt,
+        },
+      });
+      return token;
 
-    return token;
+    } catch (error) {
+      console.error('Erro ao gerar refresh token para usuário:', error);
+      throw new Error('Erro ao gerar refresh token');
+    }
+  }
+  private async generateAdminRefreshToken(admin: Admin, expiration: string = '7d'): Promise<string> {
+    const token = this.generateJwtToken(admin, expiration);
+    const expirationDays = parseInt(expiration.replace(/\D/g, ''));
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expirationDays);
+
+    try {
+      await this.prisma.authenticate.upsert({
+        where: { adminId: admin.id },
+        update: {
+          token,
+          expiresAt,
+        },
+        create: {
+          token,
+          adminId: admin.id,
+          expiresAt,
+        },
+      });
+      return token;
+
+    } catch (error) {
+      console.error('Erro ao gerar refresh token para admin:', error);
+      throw new Error('Erro ao gerar refresh token');
+    }
   }
 
-  public async generateTokens(user: any) {
-    const accessToken = this.generateJwtToken(user, '15m');
-    const refreshToken = this.generateRefreshToken(user, '1d',);
-    const tokens = {
-      accessToken,
-      refreshToken,
+  // private async generateSupplierRefreshToken(user: Supplier, expiration: string = '7d'): Promise<string> {
+  //   const token = this.generateJwtToken(user, expiration);
+  //   const expirationDays = parseInt(expiration.replace(/\D/g, ''));
+
+  //   if (isNaN(expirationDays) || expirationDays <= 0) {
+  //     throw new Error('A expiração fornecida não é válida.');
+  //   }
+
+  //   const expiresAt = new Date();
+  //   expiresAt.setDate(expiresAt.getDate() + expirationDays);
+
+  //   try {
+  //     await this.prisma.authenticate.upsert({
+  //       where: { entityId: user.id },
+  //       update: {
+  //         token,
+  //         expiresAt,
+  //       },
+  //       create: {
+  //         token,
+  //         entityId: user.id,
+  //         expiresAt,
+  //       },
+  //     });
+  //     return token;
+
+  //   } catch (error) {
+  //     console.error('Erro ao gerar refresh token para fornecedor:', error);
+  //     throw new Error('Erro ao gerar refresh token');
+  //   }
+  // }
+
+  public async generateTokens(user: any): Promise<AuthModel> {
+    const accessToken = await this.generateJwtToken(user, '15m');
+    const refreshToken = await this.generateRoleBasedRefreshToken(user);
+
+    const tokens: AuthModel = {
+      accessToken: accessToken,
+      refreshToken: refreshToken,
     };
 
     return tokens;
@@ -81,6 +155,28 @@ export class AuthService {
     if (!findedAdmin) {
       throw new Error(AuthService.errorMessage);
     }
+
+    const isValidAdmin = await bcrypt.compare(password, findedAdmin.password);
+
+    if (!isValidAdmin) {
+      throw new Error(AuthService.errorMessage);
+    }
     return findedAdmin;
+  }
+
+  private async generateRoleBasedRefreshToken(user: any): Promise<string> {
+    switch (user.role.toLowerCase()) {
+      case Role.USER:
+        const refreshTokenUserAuth = await this.generateUserRefreshToken(user);
+        return refreshTokenUserAuth;
+      case Role.ADMIN:
+        const refreshTokenAdminAuth = await this.generateAdminRefreshToken(user);
+        return refreshTokenAdminAuth;
+      // case Role.SUPPLIER:
+      //   const RefreshTokenSupplierAuth = await this.generateSupplierRefreshToken(user);
+      //   return RefreshTokenSupplierAuth;
+      default:
+        throw new Error('Tipo de usuário inválido');
+    }
   }
 }

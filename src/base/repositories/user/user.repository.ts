@@ -13,6 +13,7 @@ import {
 import { User } from '@prisma/client';
 import { AbstractUserRepository } from './abstract-user.repository';
 import { AuthModel } from '@common/models/auth.model';
+import { UserAuthentication } from '@common/models/user-authenticate.model';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
@@ -33,8 +34,8 @@ export class UserRepository implements AbstractUserRepository {
     const token = await this.AuthService.generateTokens(isValidUser);
 
     const authData: AuthModel = {
-      acessToken: token.accessToken,
-      refreshToken: "" /*token.refreshToken*/,
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
     };
 
     return authData;
@@ -62,7 +63,7 @@ export class UserRepository implements AbstractUserRepository {
     }
   }
 
-  async create(user: CreateUserDto): Promise<User> {
+  async create(user: CreateUserDto): Promise<UserAuthentication> {
     const userExists = await this.findFirstUser({
       email: user.email,
       cpf: user.cpf,
@@ -83,7 +84,27 @@ export class UserRepository implements AbstractUserRepository {
       const createdUser = await this.prismaService.user.create({
         data: UserData,
       });
-      return createdUser;
+      const token = await this.AuthService.generateTokens(createdUser);
+      const authData: AuthModel = {
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+      };
+
+      const userCreated = {
+        id: createdUser.id,
+        email: createdUser.email,
+        password: createdUser.password,
+        name: createdUser.name,
+        cpf: createdUser.cpf,
+        birthday: createdUser.birthday,
+        phoneNumber: createdUser.phoneNumber,
+        address: createdUser.address,
+      }
+      const createdUserAndAuthenticated: UserAuthentication = {
+        user: userCreated,
+        autheticate: authData,
+      }
+      return createdUserAndAuthenticated;
     } catch (error) {
       throw new BadRequestException(
         `Erro ao criar o usuário: ${error.message}`

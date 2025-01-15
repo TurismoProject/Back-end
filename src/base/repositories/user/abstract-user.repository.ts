@@ -1,10 +1,11 @@
 import { AuthModel } from '@common/models/auth.model';
+import { UserAuthentication } from '@common/models/user-authenticate.model';
 import { CreateUserDto } from '@dtos/create-user.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
 import { User } from '@prisma/client';
 
 export abstract class AbstractUserRepository {
-  abstract create(user: CreateUserDto): Promise<User>;
+  abstract create(user: CreateUserDto): Promise<UserAuthentication>;
   abstract login(email: string, password: string): Promise<AuthModel>;
   abstract findAll(): Promise<User[]>;
   abstract findById(id: string): Promise<User>;

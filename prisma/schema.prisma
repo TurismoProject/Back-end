@@ -19,6 +19,8 @@ model Admin {
   password String
   name     String
   role     Role   @default(Admin)
+
+  authenticate Authenticate?
 }
 
 model User {
@@ -26,11 +28,13 @@ model User {
   email       String @unique
   password    String
   name        String
-  cpf         String
+  cpf         String @unique
   birthday    String
-  phoneNumber String
+  phoneNumber String @unique
   address     String
   role        Role   @default(User)
+
+  authenticate Authenticate?
 }
 
 model Supplier {
@@ -43,8 +47,9 @@ model Supplier {
   address     String
   role        Role   @default(Supplier)
   products    Product[]
-}
 
+  authenticate Authenticate?
+}
 
 model Product {
   id          String   @id @default(uuid())
@@ -57,12 +62,23 @@ model Product {
 }
 
 model Authenticate {
-  id        String   @id @default(uuid()) 
-  token     String   @unique              
-  userId    String                        
-  userType  Role                          
-  expiresAt DateTime                      
-  createdAt DateTime @default(now())      
-  updatedAt DateTime @updatedAt           
+  id          String    @id @default(uuid())
+  token       String    @unique
+  expiresAt   DateTime  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  admin       Admin?    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  adminId     String?   @unique
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String?   @unique
+  supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierId  String?   @unique
+
+  @@index([adminId])
+  @@index([userId])
+  @@index([supplierId])
 }
+
+
 

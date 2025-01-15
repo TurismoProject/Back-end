@@ -1,5 +1,5 @@
 export class AuthModel {
-  acessToken: string;
+  accessToken: string;
   refreshToken: string;
   message?: string;
 }
