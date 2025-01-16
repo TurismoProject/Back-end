@@ -16,6 +16,22 @@
       "problemMatcher": ["$tsc-watch"],
       "group": "build",
       "label": "tsc: monitorar – tsconfig.json"
+    },
+    {
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: build",
+      "detail": "nest build"
+    },
+    {
+      "type": "npm",
+      "script": "start:debug",
+      "group": "rebuild",
+      "problemMatcher": [],
+      "label": "npm: start:debug",
+      "detail": "nest start --debug --watch"
     }
   ]
 }
