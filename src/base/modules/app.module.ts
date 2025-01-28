@@ -4,9 +4,12 @@ import { ProductsModule } from '@modules/products.module';
 import { SupplierModule } from '@modules/supplier.module';
 import { AdminModule } from '@modules/admin.module';
 import { AuthModule } from '@modules/auth.module';
+import { ConfigModule } from '@nestjs/config';
+import configuration from '@config/configuration';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ load: [configuration], isGlobal: true, envFilePath: '.env' }),
     AdminModule,
     UserModule,
     ProductsModule,
@@ -16,4 +19,18 @@ import { AuthModule } from '@modules/auth.module';
   controllers: [],
   providers: [],
 })
-export class AppModule {}
+export class AppModule { }
+
+
+// @Module({
+//   imports: [
+//     AdminModule,
+//     UserModule,
+//     ProductsModule,
+//     SupplierModule,
+//     AuthModule,
+//   ],
+//   controllers: [],
+//   providers: [],
+// })
+// export class AppModule {}
