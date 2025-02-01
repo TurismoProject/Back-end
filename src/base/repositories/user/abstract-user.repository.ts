@@ -5,7 +5,7 @@ import { UpdateUserDto } from '@dtos/update-user.dto';
 import { User } from '@prisma/client';
 
 export abstract class AbstractUserRepository {
-  abstract create(user: CreateUserDto): Promise<UserAuthentication>;
+  abstract create(user: CreateUserDto): Promise<User>;
   abstract login(email: string, password: string): Promise<AuthModel>;
   abstract findAll(): Promise<User[]>;
   abstract findById(id: string): Promise<User>;

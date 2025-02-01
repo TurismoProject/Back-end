@@ -6,6 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
+    "config-keys": "node ./src/config/generate-keys.ts",
     "prisma-migrate-dev": "docker exec polls_pg npx prisma migrate dev",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

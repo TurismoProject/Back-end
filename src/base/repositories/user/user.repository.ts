@@ -63,7 +63,7 @@ export class UserRepository implements AbstractUserRepository {
     }
   }
 
-  async create(user: CreateUserDto): Promise<UserAuthentication> {
+  async create(user: CreateUserDto): Promise<User> {
     const userExists = await this.findFirstUser({
       email: user.email,
       cpf: user.cpf,
@@ -84,27 +84,27 @@ export class UserRepository implements AbstractUserRepository {
       const createdUser = await this.prismaService.user.create({
         data: UserData,
       });
-      const token = await this.AuthService.generateTokens(createdUser);
-      const authData: AuthModel = {
-        accessToken: token.accessToken,
-        refreshToken: token.refreshToken,
-      };
+      // const token = await this.AuthService.generateTokens(createdUser);
+      // const authData: AuthModel = {
+      //   accessToken: token.accessToken,
+      //   refreshToken: token.refreshToken,
+      // };
 
-      const userCreated = {
-        id: createdUser.id,
-        email: createdUser.email,
-        password: createdUser.password,
-        name: createdUser.name,
-        cpf: createdUser.cpf,
-        birthday: createdUser.birthday,
-        phoneNumber: createdUser.phoneNumber,
-        address: createdUser.address,
-      }
-      const createdUserAndAuthenticated: UserAuthentication = {
-        user: userCreated,
-        autheticate: authData,
-      }
-      return createdUserAndAuthenticated;
+      // const userCreated = {
+      //   id: createdUser.id,
+      //   email: createdUser.email,
+      //   password: createdUser.password,
+      //   name: createdUser.name,
+      //   cpf: createdUser.cpf,
+      //   birthday: createdUser.birthday,
+      //   phoneNumber: createdUser.phoneNumber,
+      //   address: createdUser.address,
+      // }
+      // const createdUserAndAuthenticated: UserAuthentication = {
+      //   user: userCreated,
+      //   autheticate: authData,
+      // }
+      return createdUser;//createdUserAndAuthenticated;
     } catch (error) {
       throw new BadRequestException(
         `Erro ao criar o usuário: ${error.message}`

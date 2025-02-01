@@ -20,7 +20,7 @@ model Admin {
   name     String
   role     Role   @default(Admin)
 
-  authenticate Authenticate?
+  // authenticate Authenticate?
 }
 
 model User {
@@ -34,7 +34,7 @@ model User {
   address     String
   role        Role   @default(User)
 
-  authenticate Authenticate?
+  // authenticate Authenticate?
 }
 
 model Supplier {
@@ -48,7 +48,7 @@ model Supplier {
   role        Role   @default(Supplier)
   products    Product[]
 
-  authenticate Authenticate?
+  // authenticate Authenticate?
 }
 
 model Product {
@@ -63,21 +63,23 @@ model Product {
 
 model Authenticate {
   id          String    @id @default(uuid())
+  accountId   String?   @unique 
+  type        Role      @default(User)
   token       String    @unique
   expiresAt   DateTime  
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  admin       Admin?    @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  adminId     String?   @unique
-  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String?   @unique
-  supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  supplierId  String?   @unique
+  // admin       Admin?    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  // adminId     String?   @unique
+  // user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // userId      String?   @unique
+  // supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  // supplierId  String?   @unique
 
-  @@index([adminId])
-  @@index([userId])
-  @@index([supplierId])
+  // @@index([adminId])
+  // @@index([userId])
+  // @@index([supplierId])
 }
 
 

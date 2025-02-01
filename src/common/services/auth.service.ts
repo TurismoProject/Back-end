@@ -48,14 +48,15 @@ export class AuthService {
 
     try {
       await this.prisma.authenticate.upsert({
-        where: { userId: user.id },
+        where: { accountId: user.id },
         update: {
           token,
           expiresAt,
         },
         create: {
           token,
-          userId: user.id,
+          accountId: user.id,
+          type: user.role,
           expiresAt,
         },
       });
@@ -75,14 +76,16 @@ export class AuthService {
 
     try {
       await this.prisma.authenticate.upsert({
-        where: { adminId: admin.id },
+        where: { accountId: admin.id },
         update: {
           token,
+          type: admin.role,
           expiresAt,
         },
         create: {
           token,
-          adminId: admin.id,
+          type: admin.role,
+          accountId: admin.id,
           expiresAt,
         },
       });
