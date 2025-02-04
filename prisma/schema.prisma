@@ -63,7 +63,7 @@ model Product {
 
 model Authenticate {
   id          String    @id @default(uuid())
-  accountId   String?   @unique 
+  accountId   String    @unique 
   type        Role      @default(User)
   token       String    @unique
   expiresAt   DateTime  

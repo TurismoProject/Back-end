@@ -10,11 +10,21 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
     super({ usernameField: 'email' });
   }
 
-  validateUser(email: string, password: string): Promise<User> {
-    return this.authService.validateUser(email, password);
+  async validateUser(email: string, password: string): Promise<User> {
+    return await this.authService.validateUser(email, password);
   }
 
-  validateAdmin(email: string, password: string): Promise<Admin> {
-    return this.authService.validateAdmin(email, password);
+  async validateAdmin(email: string, password: string): Promise<Admin> {
+    return await this.authService.validateAdmin(email, password);
   }
+
+  // async validate(email: string, password: string): Promise<User | Admin> {
+  //   const user = await this.authService.validateUser(email, password);
+  //   if (user) return user;
+
+  //   const admin = await this.authService.validateAdmin(email, password);
+  //   if (admin) return admin;
+
+  //   throw new UnauthorizedException('Invalid credentials');
+  // } 
 }

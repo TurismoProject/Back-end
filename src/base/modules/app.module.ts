@@ -6,6 +6,7 @@ import { AdminModule } from '@modules/admin.module';
 import { AuthModule } from '@modules/auth.module';
 import { ConfigModule } from '@nestjs/config';
 import configuration from '@config/configuration';
+import { EmailModule } from './email.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import configuration from '@config/configuration';
     ProductsModule,
     SupplierModule,
     AuthModule,
+    EmailModule
   ],
   controllers: [],
   providers: [],
