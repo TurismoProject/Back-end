@@ -7,10 +7,10 @@ import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
         MailerModule.forRoot({
             transport: 'smtps://user@domain.com:pass@smtp.domain.com',
             defaults: {
-                from: '"nest-modules" <modules@nestjs.com>',
+                from: "matheusrogato@gmail.com",
             },
             template: {
-                dir: __dirname + '/templates',
+                dir: __dirname + 'config/templates',
                 adapter: new PugAdapter(),
                 options: {
                     strict: true,
