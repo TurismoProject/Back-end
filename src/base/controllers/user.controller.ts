@@ -17,6 +17,7 @@ import {
   Put,
   UseGuards,
   UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { User } from '@prisma/client';
@@ -25,7 +26,7 @@ import { AbstractUserRepository } from '@repositories/user/abstract-user.reposit
 @Controller('usuario')
 @ApiTags('usuario')
 export class UserController {
-  constructor(private repository: AbstractUserRepository) { }
+  constructor(private repository: AbstractUserRepository) {}
 
   @Post('cadastro')
   @UsePipes(new PasswordHasherPipe<CreateUserDto>(), CpfMaskPipe)
@@ -35,9 +36,23 @@ export class UserController {
   }
 
   @Post('login')
-  @UseGuards(LocalAuthGuard)
+  // @UseGuards(LocalAuthGuard)
   async login(@Body() user: LoginDto) {
-    const logIn: AuthModel = await this.repository.login(user.email, user.password);
+    const logIn: AuthModel = await this.repository.login(
+      user.email,
+      user.password
+    );
+
+    console.log('teste');
+    return logIn;
+  }
+
+  @Post('relogar')
+  async refreshJWT(@Body() body: { refreshToken: string }) {
+    const logIn: AuthModel = await this.repository.refreshJWT(
+      body.refreshToken
+    );
+
     return logIn;
   }
 
@@ -50,11 +65,18 @@ export class UserController {
     return { message: 'Usuário Atualizado com Sucesso', updatedUserData };
   }
 
-  @Get('buscar/:id')
-  @UsePipes(new PasswordHasherPipe<User>())
-  async getUser(@Param('id') id: string) {
-    const UserData = await this.repository.findById(id);
-    return { message: ` Usuário encontrado com Sucesso`, UserData };
+  @Get('informacoes')
+  // @UseGuards(LocalAuthGuard)
+  async getUser(@Headers('Authorization') authorization: string) {
+    const accessToken = authorization.split(' ')[1];
+    const UserData = await this.repository.findByAccessJWT(accessToken);
+    console.log(UserData);
+    return {
+      user: {
+        name: UserData.name,
+        email: UserData.email,
+      },
+    };
   }
 
   @Delete('excluir/:id')
@@ -62,7 +84,10 @@ export class UserController {
   @UsePipes(new PasswordHasherPipe<User>())
   async deleteUser(@Param('id') id: string) {
     const deleteUser = await this.repository.deleteUser(id);
-    return { message: `Usuário ${deleteUser.name} foi removido com sucesso.`, deleteUser };
+    return {
+      message: `Usuário ${deleteUser.name} foi removido com sucesso.`,
+      deleteUser,
+    };
   }
 
   @Get('buscar/todos')

@@ -5,25 +5,37 @@ import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { CreateAdminDto } from '@dtos/create-admin.dto';
 import { LoginDto } from '@dtos/login.dto';
 import { UpdateAdminDto } from '@dtos/update-admin.dto';
-import { Body, Controller, Get, Post, Put, UseGuards, UsePipes, Headers, Param, } from '@nestjs/common';
-import { Admin } from '@prisma/client';
+import {
+  Body,
+  Controller,
+  Post,
+  Put,
+  UseGuards,
+  UsePipes,
+  Param,
+} from '@nestjs/common';
 import { AbstractAdminRepository } from '@repositories/admin/abstract-admin.repository';
 
 @Controller('admin')
 export class AdminController {
-  constructor(private repository: AbstractAdminRepository) { }
+  constructor(private repository: AbstractAdminRepository) {}
 
   @Post('login')
   @UseGuards(LocalAuthGuard)
   async login(@Body() user: LoginDto) {
-    const logIn: AuthModel = await this.repository.login(user.email, user.password);
+    const logIn: AuthModel = await this.repository.login(
+      user.email,
+      user.password
+    );
     return logIn;
   }
 
   @Post('cadastro')
   @UsePipes(new PasswordHasherPipe<CreateAdminDto>())
-  async createAdmin(@Body() admin: CreateAdminDto): Promise<UserAuthentication> {
-    const createdAdmin = await this.repository.createAdmin(admin);
+  async createAdmin(
+    @Body() admin: CreateAdminDto
+  ): Promise<UserAuthentication> {
+    const createdAdmin = await this.repository.create(admin);
     return createdAdmin;
   }
 

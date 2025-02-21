@@ -1,17 +1,16 @@
 import { LocalStrategy } from '@common/guards/strategies/local.strategy';
-// import { AuthController } from '@controllers/auth.controller';
 import { DatabaseModule } from '@modules/database.module';
-import { UserModule } from '@modules/user.module';
-import { Module, forwardRef } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthService } from '@services/auth.service';
-import { AdminModule } from './admin.module';
 import { PassportModule } from '@nestjs/passport';
-import { buffer } from 'stream/consumers';
 import { ConfigService } from '@nestjs/config';
+import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
+import { AuthenticateRepository } from '@repositories/auth/authenticate.repository';
 
 @Module({
   imports: [
+    DatabaseModule,
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -23,34 +22,19 @@ import { ConfigService } from '@nestjs/config';
           privateKey: Buffer.from(privateKey, 'base64'),
           publicKey: Buffer.from(publicKey, 'base64'),
           signOptions: { algorithm: 'RS256' },
-        }
+        };
       },
-
     }),
-    forwardRef(() => UserModule),
-    forwardRef(() => AdminModule),
-    DatabaseModule,
   ],
-  providers: [AuthService, LocalStrategy],
+  providers: [
+    AuthService,
+    LocalStrategy,
+    {
+      provide: AbstractAuthenticateRepository,
+      useClass: AuthenticateRepository,
+    },
+  ],
   controllers: [],
-  exports: [AuthService],
+  exports: [AuthService, AbstractAuthenticateRepository],
 })
-export class AuthModule { }
-
-
-// @Module({
-//   imports: [
-//     PassportModule,
-//     JwtModule.register({
-//       secret: process.env.JWT_SECRET,
-//       signOptions: { expiresIn: '15m' },
-//     }),
-//     forwardRef(() => UserModule),
-//     forwardRef(() => AdminModule),
-//     DatabaseModule,
-//   ],
-//   providers: [AuthService, LocalStrategy],
-//   controllers: [],
-//   exports: [AuthService],
-// })
-// export class AuthModule { }
+export class AuthModule {}
