@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,41 +15,38 @@ enum Role {
 }
 
 model Admin {
-  id       String @id @default(uuid())
-  email    String @unique
+  id       String      @id @default(uuid())
+  email    String      @unique
   password String
   name     String
-  role     Role   @default(Admin)
-
-  // authenticate Authenticate?
+  role     Role        @default(Admin)
+  adminJWT AdminJWTs[]
 }
 
 model User {
-  id          String @id @default(uuid())
-  email       String @unique
+  id          String     @id @default(uuid())
+  email       String     @unique
   password    String
   name        String
-  cpf         String @unique
+  cpf         String     @unique
   birthday    String
-  phoneNumber String @unique
+  phoneNumber String     @unique
   address     String
-  role        Role   @default(User)
-
-  // authenticate Authenticate?
+  role        Role       @default(User)
+  userJWT     UserJWTs[]
 }
 
 model Supplier {
-  id          String @id @default(uuid())
-  email       String @unique
+  id          String         @id @default(uuid())
+  email       String         @unique
   password    String
   companyName String
-  cnpj        String @unique
+  cnpj        String         @unique
   phoneNumber String
   address     String
-  role        Role   @default(Supplier)
+  role        Role           @default(Supplier)
   products    Product[]
-
-  // authenticate Authenticate?
+  supplierJWT SupplierJWTs[]
 }
 
 model Product {
@@ -61,26 +59,32 @@ model Product {
   supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
 }
 
-model Authenticate {
-  id          String    @id @default(uuid())
-  accountId   String    @unique 
-  type        Role      @default(User)
-  token       String    @unique
-  expiresAt   DateTime  
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // admin       Admin?    @relation(fields: [adminId], references: [id], onDelete: Cascade)
-  // adminId     String?   @unique
-  // user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // userId      String?   @unique
-  // supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-  // supplierId  String?   @unique
-
-  // @@index([adminId])
-  // @@index([userId])
-  // @@index([supplierId])
+model UserJWTs {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model SupplierJWTs {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+}
 
-
+model AdminJWTs {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  adminId   String
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+}

@@ -2,16 +2,12 @@ import { PrismaService } from '@database/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from '@dtos/create-user.dto';
 import { AbstractUserRepository } from '@repositories/user/abstract-user.repository';
-import { CreateAdminDto } from '@dtos/create-admin.dto';
-import { CreateSupplierDto } from '@dtos/create-supplier.dto';
 import { AbstractAdminRepository } from '@repositories/admin/abstract-admin.repository';
-import { AbstractSupplierRepository } from '@repositories/suppliers/abstract-supplier.repository';
-import { Admin, Supplier, User } from '@prisma/client';
-import { error } from 'console';
+
 import { AuthModel } from '@common/models/auth.model';
 import { Role } from '@common/enums/role.enum';
+import { Admin, User } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -19,10 +15,10 @@ export class AuthService {
   private static readonly errorMessage: string = 'Email e/ou senha inválidos';
 
   constructor(
-    private prisma: PrismaService,
-    private jwtService: JwtService,
-    private userRepository: AbstractUserRepository,
-    private adminRepository: AbstractAdminRepository,
+    private readonly prisma: PrismaService,
+    private readonly jwtService: JwtService,
+    private readonly userRepository: AbstractUserRepository,
+    private readonly adminRepository: AbstractAdminRepository,
     // private supplierService: AbstractSupplierRepository
   ) { }
 
