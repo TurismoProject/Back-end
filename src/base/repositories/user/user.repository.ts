@@ -69,7 +69,39 @@ export class UserRepository implements AbstractUserRepository {
     return user;
   }
 
-  async create(user: CreateUserDto): Promise<User> {
+  async emailInUse(email: string): Promise<boolean> {
+    const user = await this.findByEmail(email);
+
+    if (user) return true;
+
+    return false;
+  }
+
+  async phoneInUse(phoneNumber: string): Promise<boolean> {
+    const user = await this.prismaService.user.findUnique({
+      where: {
+        phoneNumber,
+      },
+    });
+
+    if (user) return true;
+
+    return false;
+  }
+
+  async cpfInUse(cpf: string): Promise<boolean> {
+    const user = await this.prismaService.user.findUnique({
+      where: {
+        cpf,
+      },
+    });
+
+    if (user) return true;
+
+    return false;
+  }
+
+  async create(user: CreateUserDto): Promise<AuthModel> {
     await this.validateBirthDate(user.birthday);
 
     const UserData = {
@@ -81,7 +113,8 @@ export class UserRepository implements AbstractUserRepository {
       const createdUser = await this.prismaService.user.create({
         data: UserData,
       });
-      return createdUser;
+
+      return this.authService.generateTokens(createdUser);
     } catch (error) {
       throw new ConflictException(`Erro ao criar o usuário: ${error.message}`);
     }

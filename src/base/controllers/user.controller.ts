@@ -12,12 +12,10 @@ import {
   Get,
   Headers,
   Param,
-  Patch,
   Post,
   Put,
   UseGuards,
   UsePipes,
-  ValidationPipe,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { User } from '@prisma/client';
@@ -31,8 +29,33 @@ export class UserController {
   @Post('cadastro')
   @UsePipes(new PasswordHasherPipe<CreateUserDto>(), CpfMaskPipe)
   async create(@Body() user: CreateUserDto) {
-    const newUser = await this.repository.create(user);
-    return newUser;
+    const AuthModel = await this.repository.create(user);
+    return {
+      accessToken: AuthModel.accessToken,
+      refreshToken: AuthModel.refreshToken,
+    };
+  }
+
+  @Post('check-email')
+  async checkEmail(@Body('email') email: string) {
+    const status = await this.repository.emailInUse(email);
+
+    return { inUse: status };
+  }
+
+  @Post('check-phone')
+  async checkPhone(@Body('phone') phoneNumber: string) {
+    console.log(phoneNumber);
+    const status = await this.repository.phoneInUse(phoneNumber);
+
+    return { inUse: status };
+  }
+
+  @Post('check-cpf')
+  async checkCpf(@Body(CpfMaskPipe) body: { cpf: string }) {
+    const userStatus = await this.repository.cpfInUse(body.cpf);
+
+    return { inUse: userStatus };
   }
 
   @Post('login')
