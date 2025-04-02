@@ -8,7 +8,7 @@ import {
 export class CreateSupplierDto {
   @IsNotEmpty()
   @IsString()
-  companyName: string;
+  name: string;
 
   @IsNotEmpty()
   @IsEmail()

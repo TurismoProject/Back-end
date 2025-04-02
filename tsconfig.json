@@ -18,6 +18,7 @@
       "@services/*": ["src/common/services/*"],
       "@middlewares/*": ["src/common/middlewares/*"],
       "@validators/*": ["src/common/validators/*"],
+      "@decorators/*": ["src/common/decorators/*"],
       "@dtos/*": ["src/common/dtos/*"],
       "@*": ["src/*"]
     },

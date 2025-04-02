@@ -12,5 +12,10 @@ export default () => ({
     database: {
         host: process.env.DATABASE_HOST,
         port: parseInt(process.env.DATABASE_PORT, 10) || 5432
+    },
+    google: {
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackUrl: process.env.GOOGLE_CALLBACK_URL,
     }
 });

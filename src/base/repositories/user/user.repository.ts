@@ -1,79 +1,76 @@
-import { PrismaService } from '@base/database/prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from '@database/prisma/prisma.service';
 import { AuthService } from '@services/auth.service';
 import { CreateUserDto } from '@dtos/create-user.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
 import {
   BadRequestException,
   ConflictException,
-  forwardRef,
-  Inject,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { AbstractUserRepository } from './abstract-user.repository';
 import { AuthModel } from '@common/models/auth.model';
-import { UserAuthentication } from '@common/models/user-authenticate.model';
+import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
-  // eslint-disable-next-line prettier/prettier
   constructor(
-    private prismaService: PrismaService,
-    @Inject(forwardRef(() => AuthService))
-    private readonly AuthService: AuthService,
+    private readonly prismaService: PrismaService,
+    private readonly authService: AuthService,
+    private readonly authRepository: AbstractAuthenticateRepository
   ) { }
 
   async login(email: string, password: string): Promise<AuthModel> {
+    const isValidUser = await this.validateUser(email, password);
 
-    const isValidUser = await this.AuthService.validateUser(
-      email,
-      password
-    );
-
-    const token = await this.AuthService.generateTokens(isValidUser);
+    const token = this.authService.generateTokens(isValidUser);
 
     const authData: AuthModel = {
       accessToken: token.accessToken,
       refreshToken: token.refreshToken,
+      authId: isValidUser.id,
+      expirationDateRefreshToken: token.expirationDateRefreshToken,
+    };
+
+    await this.authRepository.authenticateUser(authData);
+
+    return {
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
+    };
+  }
+
+  async logout(jwt: string): Promise<void> {
+    await this.authRepository.eraseUserJWT(jwt);
+    return;
+  }
+
+  async refreshJWT(jwt: string): Promise<AuthModel> {
+    const newTokenObj = this.authService.regenerateAccessToken(jwt);
+
+    const authData: AuthModel = {
+      accessToken: newTokenObj.token,
+      refreshToken: jwt,
     };
 
     return authData;
   }
 
-  // eslint-disable-next-line prettier/prettier
-  async findFirstUser({
-    email,
-    cpf,
-  }: {
-    email?: string;
-    cpf?: string;
-  }): Promise<User> {
-    try {
-      const existingUser = await this.prismaService.user.findFirst({
-        where: {
-          OR: [email ? { email } : undefined, cpf ? { cpf } : undefined],
-        },
-      });
-      return existingUser;
-    } catch (error) {
-      throw new Error(
-        `Não foi possível verificar se o usuário já existe: ${error.message}`
-      );
-    }
+  async findByAccessJWT(jwt: string): Promise<User> {
+    const payload: { sub: string; email: string } =
+      await this.authService.validateAccessToken(jwt);
+
+    const user = await this.findByEmail(payload.email);
+
+    return user;
   }
 
   async create(user: CreateUserDto): Promise<User> {
-    const userExists = await this.findFirstUser({
-      email: user.email,
-      cpf: user.cpf,
-    });
-
     await this.validateBirthDate(user.birthday);
-
-    if (userExists) {
-      throw new ConflictException('Usuário já existe');
-    }
 
     const UserData = {
       ...user,
@@ -86,43 +83,8 @@ export class UserRepository implements AbstractUserRepository {
       });
       return createdUser;
     } catch (error) {
-      throw new BadRequestException(
-        `Erro ao criar o usuário: ${error.message}`
-      );
+      throw new ConflictException(`Erro ao criar o usuário: ${error.message}`);
     }
-  }
-
-  private async validateBirthDate(birthDate: string): Promise<boolean> {
-    const date = new Date(birthDate);
-    let validateBirthUser = true;
-
-    if (isNaN(date.getTime())) {
-      validateBirthUser = false;
-      throw new BadRequestException('data de nascimento inválida');
-    }
-    const age = await this.calculateAge(date);
-    if (age < 18) {
-      validateBirthUser = false;
-      throw new BadRequestException(
-        'O usuário deve ter pelo menos 18 anos para se cadastrar!'
-      );
-    }
-    return Promise.resolve(validateBirthUser);
-  }
-
-  private async calculateAge(birthDate: Date): Promise<number> {
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDifference = today.getMonth() - birthDate.getMonth();
-    // eslint-disable-next-line prettier/prettier
-    const validBirth =
-      monthDifference < 0 ||
-      (monthDifference === 0 && today.getDate() < birthDate.getDate());
-    // eslint-disable-next-line prettier/prettier
-    if (validBirth) {
-      age--;
-    }
-    return age;
   }
 
   async findAll(): Promise<User[]> {
@@ -130,7 +92,9 @@ export class UserRepository implements AbstractUserRepository {
       const users = await this.prismaService.user.findMany();
       return users;
     } catch (error) {
-      throw new Error(`Não foi possível buscar os usuários: ${error.message}`);
+      throw new InternalServerErrorException(
+        `Não foi possível buscar os usuários: ${error.message}`
+      );
     }
   }
 
@@ -138,17 +102,6 @@ export class UserRepository implements AbstractUserRepository {
     const user = await this.prismaService.user.findUnique({
       where: { id },
     });
-    return user;
-  }
-
-  async findByEmail(email: string): Promise<User> {
-    const user = await this.prismaService.user.findUnique({
-      where: { email },
-    });
-
-    if (!user) {
-      throw new NotFoundException('Usuário não encontrado');
-    }
     return user;
   }
 
@@ -186,7 +139,7 @@ export class UserRepository implements AbstractUserRepository {
     }
   }
 
-  async userExists(id: string): Promise<boolean> {
+  private async userExists(id: string): Promise<boolean> {
     let validExistUser = false;
     const userStatus = await this.findById(id);
 
@@ -196,5 +149,60 @@ export class UserRepository implements AbstractUserRepository {
       throw new NotFoundException(`Usuário não existe`);
     }
     return validExistUser;
+  }
+
+  private async findByEmail(email: string): Promise<User> {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { email },
+      });
+
+      return user;
+    } catch (e) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+  }
+
+  private async validateUser(email: string, password: string): Promise<User> {
+    const findedUser = await this.findByEmail(email);
+    if (!findedUser) {
+      throw new NotFoundException('Email e/ou senha inválidos');
+    }
+    const isValidUser = await bcrypt.compare(password, findedUser.password);
+    if (!isValidUser) {
+      throw new UnauthorizedException('Email e/ou senha inválidos');
+    }
+    return findedUser;
+  }
+
+  private async validateBirthDate(birthDate: string): Promise<boolean> {
+    const date = new Date(birthDate);
+    let validateBirthUser = true;
+
+    if (isNaN(date.getTime())) {
+      validateBirthUser = false;
+      throw new BadRequestException('data de nascimento inválida');
+    }
+    const age = await this.calculateAge(date);
+    if (age < 18) {
+      validateBirthUser = false;
+      throw new BadRequestException(
+        'O usuário deve ter pelo menos 18 anos para se cadastrar!'
+      );
+    }
+    return Promise.resolve(validateBirthUser);
+  }
+
+  private async calculateAge(birthDate: Date): Promise<number> {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    const validBirth =
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < birthDate.getDate());
+    if (validBirth) {
+      age--;
+    }
+    return age;
   }
 }

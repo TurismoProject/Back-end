@@ -21,7 +21,7 @@ import * as bcrypt from 'bcrypt';
 
 @Controller('provedor')
 export class SupplierController {
-  constructor(private readonly repository: AbstractSupplierRepository) {}
+  constructor(private readonly repository: AbstractSupplierRepository) { }
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -46,7 +46,7 @@ export class SupplierController {
     const supplier = await this.repository.create(body);
 
     return {
-      companyName: supplier.companyName,
+      companyName: supplier.name,
       email: supplier.email,
     };
   }
@@ -62,7 +62,7 @@ export class SupplierController {
       throw new ConflictException('Invalid password');
 
     return {
-      companyName: supplier.companyName,
+      companyName: supplier.name,
       email: supplier.email,
       password: supplier.password,
     };
@@ -74,7 +74,7 @@ export class SupplierController {
     const supplier = await this.repository.update(body);
 
     return {
-      companyName: supplier.companyName,
+      companyName: supplier.name,
       email: supplier.email,
       password: supplier.password,
     };
