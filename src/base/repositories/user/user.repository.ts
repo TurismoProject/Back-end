@@ -15,6 +15,8 @@ import { User } from '@prisma/client';
 import { AbstractUserRepository } from './abstract-user.repository';
 import { AuthModel } from '@common/models/auth.model';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
+import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
+import { GoogleAuthentication } from '@common/models/user-google-authenticate.model';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
@@ -23,6 +25,58 @@ export class UserRepository implements AbstractUserRepository {
     private readonly authService: AuthService,
     private readonly authRepository: AbstractAuthenticateRepository
   ) { }
+
+  async createWithGoogle(user: CreateUserWithGoogleDto): Promise<GoogleAuthentication> {
+    try {
+      const createdUserWithGoogle = await this.prismaService.user.create({
+        data: {
+          email: user.email,
+          name: user.name,
+          googleId: user.googleId,
+          password: '',
+          cpf: '',
+          birthday: '',
+          phoneNumber: '',
+          address: '',
+        },
+      })
+      const token = this.authService.generateTokens(createdUserWithGoogle).accessToken;
+      return {
+        user: createdUserWithGoogle,
+        token,
+      };
+    } catch (error) {
+      throw new ConflictException(`Erro ao criar o usuário com google: ${error.message}`);
+    }
+  }
+
+  async loginWithGoogle(user: CreateUserWithGoogleDto): Promise<GoogleAuthentication> {
+    try {
+      
+      const existingUser = await this.prismaService.user.findUnique({
+        where: {
+          email: user.email,
+          AND: {
+            googleId: user.googleId
+          }
+        },
+      });
+
+      if (!existingUser) {
+        throw new NotFoundException('Usuário não foi encontrado.');
+      }
+
+      const token = this.authService.generateTokens(existingUser).accessToken;
+
+      return {
+        user: existingUser,
+        token,
+      };
+    } catch (error) {
+      throw new UnauthorizedException(`Erro ao fazer login com Google: ${error.message}`);
+    }
+  }
+
 
   async login(email: string, password: string): Promise<AuthModel> {
     const isValidUser = await this.validateUser(email, password);

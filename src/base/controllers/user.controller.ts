@@ -5,6 +5,7 @@ import { AuthModel } from '@common/models/auth.model';
 import { CpfMaskPipe } from '@common/pipes/cpf-format.pipe';
 import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { Roles } from '@decorators/user-roles.decorator';
+import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
 import { CreateUserDto } from '@dtos/create-user.dto';
 import { LoginDto } from '@dtos/login.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
@@ -17,9 +18,12 @@ import {
   Param,
   Post,
   Put,
+  Req,
+  Res,
   UseGuards,
   UsePipes,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
 import { User } from '@prisma/client';
@@ -29,7 +33,10 @@ import { AbstractUserRepository } from '@repositories/user/abstract-user.reposit
 @UseGuards(RolesGuard)
 @ApiTags('usuario')
 export class UserController {
-  constructor(private readonly repository: AbstractUserRepository) { }
+  private readonly frontendUrl: string;
+  constructor(private readonly repository: AbstractUserRepository, private readonly configService: ConfigService) {
+    this.frontendUrl = this.configService.get<string>('FRONTEND_URL');
+  }
 
   @Post('cadastro')
   @Roles(Role.USER, Role.ADMIN)
@@ -37,6 +44,24 @@ export class UserController {
   async create(@Body() user: CreateUserDto) {
     const newUser = await this.repository.create(user);
     return newUser;
+  }
+
+  @Get('auth/google')
+  @UseGuards(AuthGuard('google'))
+  async googleLogin() { }
+
+  @Get('auth/google/create/redirect')
+  @UseGuards(AuthGuard('google'))
+  async googleCreateRedirect(@Req() req, @Res() res) {
+    const result = await this.repository.createWithGoogle(req.user);
+    return res.redirect(`${this.frontendUrl}/create/callback?token=${result.token}`);
+  }
+
+  @Get('auth/google/login/redirect')
+  @UseGuards(AuthGuard('google'))
+  async googleLoginRedirect(@Req() req, @Res() res) {
+    const result = await this.repository.loginWithGoogle(req.user);
+    return res.redirect(`${this.frontendUrl}/login/callback?token=${result.token}`);
   }
 
   @Post('login')

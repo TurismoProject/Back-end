@@ -29,6 +29,7 @@ model User {
   password    String
   name        String
   cpf         String     @unique
+  googleId    String?    @unique 
   birthday    String
   phoneNumber String     @unique
   address     String
