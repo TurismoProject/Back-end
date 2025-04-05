@@ -1,5 +1,13 @@
-import { Decimal } from '@prisma/client/runtime/library';
-import { IsDecimal, IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsCategoryArray } from '@common/decorators/is-category-array.decorator';
+import { Category } from '@prisma/client';
+import {
+  ArrayNotEmpty,
+  IsArray,
+  IsDecimal,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
@@ -12,9 +20,14 @@ export class CreateProductDto {
 
   @IsDecimal()
   @IsNotEmpty()
-  price: Decimal;
+  price: number;
 
   @IsUUID()
   @IsNotEmpty()
   supplierId: string;
+
+  @IsArray()
+  @IsCategoryArray()
+  @ArrayNotEmpty()
+  categories: Category[];
 }

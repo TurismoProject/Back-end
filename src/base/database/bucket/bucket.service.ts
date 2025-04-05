@@ -1,31 +1,42 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { initializeApp, deleteApp, FirebaseApp } from 'firebase/app';
-import { FirebaseStorage, getStorage } from 'firebase/storage';
+import { BucketItemFromList, Client } from 'minio';
 
 @Injectable()
 export class BucketService implements OnModuleInit, OnModuleDestroy {
-  private bucket: FirebaseStorage;
-  protected app: FirebaseApp;
+  private client: Client;
+  private buckets: BucketItemFromList[] = [];
 
-  onModuleInit() {
-    const app = initializeApp({
-      apiKey: process.env.FIREBASE_API_KEY,
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.FIREBASE_APP_ID,
+  async onModuleInit() {
+    this.client = new Client({
+      endPoint: process.env.MINIO_ENDPOINT,
+      port: parseInt(process.env.MINIO_PORT),
+      useSSL: process.env.MINIO_USE_SSL === 'true',
+      accessKey: process.env.MINIO_ACCESS_KEY,
+      secretKey: process.env.MINIO_SECRET_KEY,
     });
-    const storage = getStorage(app);
-    this.bucket = storage;
+
+    this.buckets = await this.client.listBuckets();
   }
 
   onModuleDestroy() {
-    this.bucket = null;
-    deleteApp(this.app);
+    delete this.client;
     return;
   }
 
-  getBucket() {
-    return this.bucket;
+  getClient() {
+    return this.client;
+  }
+
+  async createBucket(bucketName: string) {
+    const date = new Date();
+    await this.client.makeBucket(bucketName);
+    this.buckets.push({ name: bucketName, creationDate: date });
+    return;
+  }
+
+  async deleteBucket(bucketName: string) {
+    await this.client.removeBucket(bucketName);
+    this.buckets = this.buckets.filter((bucket) => bucket.name !== bucketName);
+    return;
   }
 }

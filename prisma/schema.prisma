@@ -23,39 +23,86 @@ model Admin {
 }
 
 model User {
-  id          String     @id @default(uuid())
-  email       String     @unique
-  password    String
-  name        String
-  cpf         String     @unique
-  birthday    String
-  phoneNumber String     @unique
-  address     String
-  role        Role       @default(User)
-  userJWT     UserJWTs[]
+  id              String           @id @default(uuid())
+  email           String           @unique
+  password        String
+  name            String
+  cpf             String           @unique
+  birthday        String
+  phoneNumber     String           @unique
+  address         String
+  role            Role             @default(User)
+  userJWT         UserJWTs[]
+  productReviews  ProductReview[]
+  supplierReviews SupplierReview[]
 }
 
 model Supplier {
-  id          String         @id @default(uuid())
-  email       String         @unique
+  id          String           @id @default(uuid())
+  email       String           @unique
   password    String
   companyName String
-  cnpj        String         @unique
+  cnpj        String           @unique
   phoneNumber String
   address     String
-  role        Role           @default(Supplier)
+  role        Role             @default(Supplier)
   products    Product[]
   supplierJWT SupplierJWTs[]
+  reviews     SupplierReview[]
 }
 
 model Product {
-  id          String   @id @default(uuid())
-  name        String
+  id              String                  @id @default(uuid())
+  name            String
+  description     String
+  price           Decimal
+  rating          Decimal                 @default(0)
+  categories      Category[]
+  bucketName      String
+  imagesPositions ProductImagesPosition[]
+  supplierId      String
+  supplier        Supplier                @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  reviews         ProductReview[]
+}
+
+model ProductImagesPosition {
+  id        String  @id @default(uuid())
+  position  Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  imageName String
+}
+
+model ProductReview {
+  id          String  @id @default(uuid())
+  title       String
   description String
-  price       Decimal
-  imagesUrl   String[]
-  supplierId  String
+  rating      Decimal @default(0)
+  product     Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId   String
+  User        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+}
+
+model SupplierReview {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  rating      Decimal  @default(0)
   supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  supplierId  String
+  User        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+}
+
+enum Category {
+  HOTEL
+  BUNDLE
+  TOUR
+  RESTAURANT
+  TRANSPORT
+  CRAFTWORK
+  AQUATIC
 }
 
 model UserJWTs {
