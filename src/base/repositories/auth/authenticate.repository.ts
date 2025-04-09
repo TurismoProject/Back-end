@@ -10,7 +10,7 @@ export class AuthenticateRepository implements AbstractAuthenticateRepository {
 
   async authenticateAdmin(authData: AuthModel): Promise<AdminJWTs> {
     const { authId, refreshToken, expirationDateRefreshToken } = authData;
-    const expirationDate = new Date(expirationDateRefreshToken);
+    const expirationDate = new Date(Number(expirationDateRefreshToken) * 1000);
 
     const savedJWT = await this.prismaService.adminJWTs.create({
       data: {

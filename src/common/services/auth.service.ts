@@ -8,7 +8,7 @@ export class AuthService {
   constructor(private readonly jwtService: JwtService) { }
 
   public generateTokens(user: User | Admin | Supplier): AuthModel {
-    const accessTokenObj = this.generateJwtToken(user, '15m');
+    const accessTokenObj = this.generateJwtToken(user, '15d');
     const refreshTokenObj = this.generateJwtToken(user, '7d');
 
     const tokens: AuthModel = {
@@ -36,7 +36,7 @@ export class AuthService {
 
   private generateJwtToken(
     user: User | Admin | Supplier,
-    expiration: string = '15m'
+    expiration: string = '15d'
   ) {
     const payload = {
       sub: user.id,
@@ -44,7 +44,7 @@ export class AuthService {
       role: user.role,
     };
 
-    const token = this.jwtService.sign(payload, { expiresIn: expiration });
+    const token = this.jwtService.sign({ ...payload, exp: Math.floor(Date.now() / 1000) + (15 * 24 * 60 * 60) });
     const tokenObject = this.jwtService.decode(token);
     const { exp } = tokenObject;
     return {

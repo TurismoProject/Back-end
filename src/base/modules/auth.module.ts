@@ -8,6 +8,8 @@ import { ConfigService } from '@nestjs/config';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
 import { AuthenticateRepository } from '@repositories/auth/authenticate.repository';
 import { JwtStrategy } from '@common/guards/strategies/jwt.strategy';
+// import { RolesGuard } from '@common/guards/roles.guard';
+import { JwtAuthGuard } from '@common/guards/jwt.guard';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { JwtStrategy } from '@common/guards/strategies/jwt.strategy';
     AuthService,
     // LocalStrategy,
     JwtStrategy,
+    JwtAuthGuard,
+    // RolesGuard,
     {
       provide: AbstractAuthenticateRepository,
       useClass: AuthenticateRepository,

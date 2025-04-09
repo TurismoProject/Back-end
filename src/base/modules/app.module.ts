@@ -18,22 +18,10 @@ import { EmailModule } from './email.module';
     UserModule,
     ProductsModule,
     SupplierModule,
-    EmailModule,
+    // EmailModule,
   ],
   controllers: [],
   providers: [],
 })
 export class AppModule { }
 
-// @Module({
-//   imports: [
-//     AdminModule,
-//     UserModule,
-//     ProductsModule,
-//     SupplierModule,
-//     AuthModule,
-//   ],
-//   controllers: [],
-//   providers: [],
-// })
-// export class AppModule {}

@@ -86,6 +86,6 @@ model AdminJWTs {
   expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  adminId   String
+  adminId   String   //@unique
   admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
 }

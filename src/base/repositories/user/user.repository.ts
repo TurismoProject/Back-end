@@ -40,11 +40,22 @@ export class UserRepository implements AbstractUserRepository {
           address: '',
         },
       })
-      const token = this.authService.generateTokens(createdUserWithGoogle).accessToken;
+      const token = this.authService.generateTokens(createdUserWithGoogle);
+
+      const authData: AuthModel = {
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+        authId: createdUserWithGoogle.id,
+        expirationDateRefreshToken: token.expirationDateRefreshToken,
+      };
+
+      await this.authRepository.authenticateUser(authData);
+
       return {
         user: createdUserWithGoogle,
-        token,
+        token: token.accessToken,
       };
+
     } catch (error) {
       throw new ConflictException(`Erro ao criar o usuário com google: ${error.message}`);
     }
@@ -52,7 +63,7 @@ export class UserRepository implements AbstractUserRepository {
 
   async loginWithGoogle(user: CreateUserWithGoogleDto): Promise<GoogleAuthentication> {
     try {
-      
+
       const existingUser = await this.prismaService.user.findUnique({
         where: {
           email: user.email,
@@ -76,7 +87,6 @@ export class UserRepository implements AbstractUserRepository {
       throw new UnauthorizedException(`Erro ao fazer login com Google: ${error.message}`);
     }
   }
-
 
   async login(email: string, password: string): Promise<AuthModel> {
     const isValidUser = await this.validateUser(email, password);

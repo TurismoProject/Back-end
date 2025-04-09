@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import validator from 'validator';
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy) {
+export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     constructor(private readonly configService: ConfigService) {
         const publicKey = configService.get<string>('JWT_PUBLIC_KEY', { infer: true, });
         super({
@@ -15,19 +15,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
             algorithms: ['RS256'],
         });
     }
-
     async validate(payload: any) {
+        const normalizedRole = payload.role.toUpperCase();
+        console.log(payload);
+        console.log(normalizedRole);
 
-        if (!payload || !validator.isUUID(payload.sub)) {
-            throw new UnauthorizedException();
-        }
-
-        const validPayload = {
+        return {
             userId: payload.sub,
-            username: payload.username
+            email: payload.email,
+            role: normalizedRole,
         };
 
-        return validPayload;
     }
-
 }

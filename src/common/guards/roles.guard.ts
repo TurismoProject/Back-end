@@ -1,25 +1,55 @@
-import { ROLES_KEY } from '@decorators/user-roles.decorator';
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+    Injectable,
+    CanActivate,
+    ExecutionContext,
+    UnauthorizedException,
+    ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Role } from '@prisma/client';
-
+import { ROLES_KEY } from '@decorators/user-roles.decorator';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-    constructor(private readonly reflector: Reflector) { }
+    constructor(
+        private reflector: Reflector,
+        private jwtService: JwtService,
+    ) { }
 
-    canActivate(context: ExecutionContext): boolean {
-        const requiredRoles = this.reflector.getAllAndOverride<Role[]>(ROLES_KEY, [
-            context.getHandler(),
-            context.getClass(),
-        ]);
+    async canActivate(context: ExecutionContext): Promise<boolean> {
+        const requiredRoles = this.reflector.get<Role[]>(ROLES_KEY, context.getHandler());
+
         if (!requiredRoles) {
             return true;
         }
 
-        const { user } = context.switchToHttp().getRequest();
-        const toVerifyRole = requiredRoles.some((role) => user.roles?.includes(role));
+        const request = context.switchToHttp().getRequest();
+        const authHeader = request.headers.authorization;
 
-        return toVerifyRole;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new UnauthorizedException('Token inválido');
+        }
+
+        const token = authHeader.split(' ')[1];
+
+        let payload: any;
+        try {
+            payload = this.jwtService.verify(token);
+        } catch (err) {
+            throw new UnauthorizedException('Token inválido ou expirado');
+        }
+
+        const userRole: Role = payload.role;
+
+        const hasRole = requiredRoles.includes(userRole);
+
+        if (!hasRole) {
+            throw new ForbiddenException('Usuário sem permissão para acessar este recurso');
+        }
+
+        request.user = payload;
+
+        return true;
     }
 }

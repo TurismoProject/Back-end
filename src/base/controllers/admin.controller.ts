@@ -13,6 +13,8 @@ import {
   UseGuards,
   UsePipes,
   Param,
+  Req,
+  Get,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Admin } from '@prisma/client';
@@ -47,4 +49,14 @@ export class AdminController {
     const updatedAdminData = await this.repository.updateAdmin(id, user);
     return { message: 'Usuário Atualizado com Sucesso', updatedAdminData };
   }
+  @UseGuards(AuthGuard('jwt'))
+  @Get('validate')
+  testValidate(@Req() req) {
+    console.log('User from validate:', req.user);
+    return {
+      message: 'Token is valid!',
+      user: req.user,
+    };
+  }
+
 }

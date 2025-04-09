@@ -1,8 +1,8 @@
-import { Role } from '@common/enums/role.enum';
 import { LocalAuthGuard } from '@common/guards/auth.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
+// import { RolesGuard } from '@common/guards/roles.guard';
 import { AuthModel } from '@common/models/auth.model';
-import { CpfMaskPipe } from '@common/pipes/cpf-format.pipe';
+import { CpfFormatPipe } from '@common/pipes/cpf-format.pipe';
 import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { Roles } from '@decorators/user-roles.decorator';
 import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
@@ -30,7 +30,7 @@ import { User } from '@prisma/client';
 import { AbstractUserRepository } from '@repositories/user/abstract-user.repository';
 
 @Controller('usuario')
-@UseGuards(RolesGuard)
+// @UseGuards(RolesGuard)
 @ApiTags('usuario')
 export class UserController {
   private readonly frontendUrl: string;
@@ -39,8 +39,7 @@ export class UserController {
   }
 
   @Post('cadastro')
-  @Roles(Role.USER, Role.ADMIN)
-  @UsePipes(new PasswordHasherPipe<CreateUserDto>(), CpfMaskPipe)
+  @UsePipes(new PasswordHasherPipe<CreateUserDto>(), CpfFormatPipe)
   async create(@Body() user: CreateUserDto) {
     const newUser = await this.repository.create(user);
     return newUser;
@@ -50,14 +49,14 @@ export class UserController {
   @UseGuards(AuthGuard('google'))
   async googleLogin() { }
 
-  @Get('auth/google/create/redirect')
+  @Get('auth/google/create/callback')
   @UseGuards(AuthGuard('google'))
   async googleCreateRedirect(@Req() req, @Res() res) {
     const result = await this.repository.createWithGoogle(req.user);
     return res.redirect(`${this.frontendUrl}/create/callback?token=${result.token}`);
   }
 
-  @Get('auth/google/login/redirect')
+  @Get('auth/google/login/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginRedirect(@Req() req, @Res() res) {
     const result = await this.repository.loginWithGoogle(req.user);
@@ -65,20 +64,17 @@ export class UserController {
   }
 
   @Post('login')
-  @Roles(Role.USER)
   async login(@Body() user: LoginDto) {
     const logIn: AuthModel = await this.repository.login(
       user.email,
       user.password
     );
 
-    console.log('teste');
     return logIn;
   }
 
   @Post('relogar')
   @UseGuards(AuthGuard('jwt'))
-  @Roles(Role.USER)
   async refreshJWT(@Body() body: { refreshToken: string }) {
     const logIn: AuthModel = await this.repository.refreshJWT(
       body.refreshToken
@@ -89,7 +85,7 @@ export class UserController {
 
   // @UseGuards(LocalAuthGuard)
   @Put('atualizar/:id')
-  @Roles(Role.USER, Role.ADMIN)
+  @Roles('admin')
   @UseGuards(AuthGuard('jwt'))
   @UsePipes(new PasswordHasherPipe<User>())
   async update(@Param('id') id: string, @Body() user: UpdateUserDto) {
@@ -98,7 +94,7 @@ export class UserController {
   }
 
   @Get('informacoes')
-  @Roles(Role.USER, Role.ADMIN)
+  @Roles('admin')
   @UseGuards(AuthGuard('jwt'))
   async getUser(@Headers('Authorization') authorization: string) {
     const accessToken = authorization.split(' ')[1];
@@ -112,9 +108,9 @@ export class UserController {
     };
   }
 
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('Admin')
   @Delete('excluir/:id')
-  @Roles(Role.USER, Role.ADMIN)
-  @UseGuards(AuthGuard('jwt'))
   @UsePipes(new PasswordHasherPipe<User>())
   async deleteUser(@Param('id') id: string) {
     const deleteUser = await this.repository.deleteUser(id);
@@ -124,10 +120,11 @@ export class UserController {
     };
   }
 
+  @Roles('Admin')
   @Get('buscar/todos')
-  @Roles(Role.ADMIN)
-  async findAll() {
-    const allUsers = await this.repository.findAll();
-    return allUsers;
+  // @UseGuards(AuthGuard('jwt'), RolesGuard)
+  async findAll(@Req() req) {
+    const users: User[] = await this.repository.findAll();
+    return users;
   }
 }
