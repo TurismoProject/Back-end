@@ -7,6 +7,9 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
 import { AuthenticateRepository } from '@repositories/auth/authenticate.repository';
+import { JwtStrategy } from '@common/guards/strategies/jwt.strategy';
+// import { RolesGuard } from '@common/guards/roles.guard';
+import { JwtAuthGuard } from '@common/guards/jwt.guard';
 
 @Module({
   imports: [
@@ -16,8 +19,10 @@ import { AuthenticateRepository } from '@repositories/auth/authenticate.reposito
       inject: [ConfigService],
       global: true,
       useFactory: (config: ConfigService) => {
-        const privateKey = config.get<string>('JWT_PRIVATE_KEY');
-        const publicKey = config.get<string>('JWT_PUBLIC_KEY');
+        const privateKey = config.get<string>('JWT_PRIVATE_KEY', {
+          infer: true,
+        });
+        const publicKey = config.get<string>('JWT_PUBLIC_KEY', { infer: true });
         return {
           privateKey: Buffer.from(privateKey, 'base64'),
           publicKey: Buffer.from(publicKey, 'base64'),
@@ -28,7 +33,10 @@ import { AuthenticateRepository } from '@repositories/auth/authenticate.reposito
   ],
   providers: [
     AuthService,
-    LocalStrategy,
+    // LocalStrategy,
+    JwtStrategy,
+    JwtAuthGuard,
+    // RolesGuard,
     {
       provide: AbstractAuthenticateRepository,
       useClass: AuthenticateRepository,

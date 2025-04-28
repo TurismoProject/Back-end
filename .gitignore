@@ -58,3 +58,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 #configurations keys
 *.pem
 *.txt
+
+#test
+*.http

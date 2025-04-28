@@ -6,11 +6,11 @@ import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class AuthenticateRepository implements AbstractAuthenticateRepository {
-  constructor(private prismaService: PrismaService) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
   async authenticateAdmin(authData: AuthModel): Promise<AdminJWTs> {
     const { authId, refreshToken, expirationDateRefreshToken } = authData;
-    const expirationDate = new Date(expirationDateRefreshToken);
+    const expirationDate = new Date(Number(expirationDateRefreshToken) * 1000);
 
     const savedJWT = await this.prismaService.adminJWTs.create({
       data: {

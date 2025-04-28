@@ -19,7 +19,7 @@ import { ReviewsModule } from './reviews.module';
     UserModule,
     ProductsModule,
     SupplierModule,
-    EmailModule,
+    // EmailModule,
     ReviewsModule,
   ],
   controllers: [],

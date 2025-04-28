@@ -1,6 +1,7 @@
 import * as bcrypt from 'bcrypt';
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -13,38 +14,22 @@ import { Admin } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { AuthModel } from '@common/models/auth.model';
 import { AuthService } from '@services/auth.service';
-import { UserAuthentication } from '@common/models/user-authenticate.model';
+import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
 
 @Injectable()
 export class AdminRepository implements AbstractAdminRepository {
   constructor(
-    private prismaService: PrismaService,
-    private readonly authService: AuthService
+    private readonly prismaService: PrismaService,
+    private readonly authService: AuthService,
+    private readonly authRepository: AbstractAuthenticateRepository
   ) {}
 
-  async create(userAdmin: CreateAdminDto): Promise<UserAuthentication> {
+  async create(userAdmin: CreateAdminDto): Promise<Admin> {
     try {
       const adminCreate = await this.prismaService.admin.create({
         data: userAdmin,
       });
-      const token = await this.authService.generateTokens(adminCreate);
-      const authData: AuthModel = {
-        accessToken: token.accessToken,
-        refreshToken: token.refreshToken,
-      };
-
-      const admin = {
-        id: adminCreate.id,
-        email: adminCreate.email,
-        name: adminCreate.name,
-        password: adminCreate.password,
-      };
-      const createAdminAndAuthenticate: UserAuthentication = {
-        user: admin,
-        autheticate: authData,
-      };
-
-      return createAdminAndAuthenticate;
+      return adminCreate;
     } catch (error) {
       throw new InternalServerErrorException(
         `Erro ao criar o admin: ${error.message}`
@@ -60,9 +45,16 @@ export class AdminRepository implements AbstractAdminRepository {
     const authData: AuthModel = {
       accessToken: token.accessToken,
       refreshToken: token.refreshToken,
+      authId: isValidUser.id,
+      expirationDateRefreshToken: token.expirationDateRefreshToken,
     };
 
-    return authData;
+    await this.authRepository.authenticateAdmin(authData);
+
+    return {
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
+    };
   }
 
   async findAll(): Promise<Admin[]> {

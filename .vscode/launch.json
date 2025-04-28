@@ -2,16 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "type": "pwa-node",
+      "type": "node",
       "request": "launch",
       "name": "Debug NestJS",
-      "program": "${workspaceFolder}/dist/main.js",
+      "program": "${workspaceFolder}/src/main.ts",
+      "runtimeArgs": ["-r", "ts-node/register"],
       "cwd": "${workspaceFolder}",
-      "runtimeExecutable": "node",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
-      "preLaunchTask": "tsc: build - tsconfig.json",
-      "skipFiles": ["<node_internals>/**"],
-      "console": "integratedTerminal"
+      "internalConsoleOptions": "openOnSessionStart"
     }
   ]
 }

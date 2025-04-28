@@ -13,7 +13,11 @@ import {
   UseGuards,
   UsePipes,
   Param,
+  Req,
+  Get,
 } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { Admin } from '@prisma/client';
 import { AbstractAdminRepository } from '@repositories/admin/abstract-admin.repository';
 
 @Controller('admin')
@@ -21,7 +25,6 @@ export class AdminController {
   constructor(private repository: AbstractAdminRepository) {}
 
   @Post('login')
-  @UseGuards(LocalAuthGuard)
   async login(@Body() user: LoginDto) {
     const logIn: AuthModel = await this.repository.login(
       user.email,
@@ -32,17 +35,25 @@ export class AdminController {
 
   @Post('cadastro')
   @UsePipes(new PasswordHasherPipe<CreateAdminDto>())
-  async createAdmin(
-    @Body() admin: CreateAdminDto
-  ): Promise<UserAuthentication> {
+  async createAdmin(@Body() admin: CreateAdminDto): Promise<Admin> {
     const createdAdmin = await this.repository.create(admin);
     return createdAdmin;
   }
 
   @Put('atualizar/:id')
+  @UseGuards(AuthGuard('jwt'))
   @UsePipes(new PasswordHasherPipe<CreateAdminDto>())
   async updateAdmin(@Param('id') id: string, @Body() user: UpdateAdminDto) {
     const updatedAdminData = await this.repository.updateAdmin(id, user);
     return { message: 'Usuário Atualizado com Sucesso', updatedAdminData };
+  }
+  @UseGuards(AuthGuard('jwt'))
+  @Get('validate')
+  testValidate(@Req() req) {
+    console.log('User from validate:', req.user);
+    return {
+      message: 'Token is valid!',
+      user: req.user,
+    };
   }
 }

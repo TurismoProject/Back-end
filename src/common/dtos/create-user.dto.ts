@@ -1,3 +1,4 @@
+import { IsCPF } from '@decorators/cpf.decorator';
 import {
   IsDateString,
   IsEmail,
@@ -23,7 +24,7 @@ export class CreateUserDto {
 
   @IsNotEmpty()
   @IsString()
-  //Todo @IsCpf() -> fazer decorator para o cpf
+  @IsCPF()
   cpf: string;
 
   @IsDateString({ strict: true })
