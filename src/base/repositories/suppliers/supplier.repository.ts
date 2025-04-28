@@ -16,7 +16,7 @@ export class SupplierRepository implements AbstractSupplierRepository {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly productRepository: AbstractProductsRepository
-  ) { }
+  ) {}
 
   async create(data: CreateSupplierDto): Promise<Supplier> {
     const supplierExists = await this.getByEmail(data.email);

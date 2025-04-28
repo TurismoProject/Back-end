@@ -10,7 +10,7 @@ export class ReviewsRepository implements AbstractReviewsRepository {
   constructor(private readonly prismaService: PrismaService) {}
 
   async createReview(
-    data: CreateReviewDto,
+    data: CreateReviewDto
   ): Promise<ProductReview | SupplierReview> {
     if (data.productId) {
       const productReview = await this.prismaService.productReview.create({
@@ -28,7 +28,7 @@ export class ReviewsRepository implements AbstractReviewsRepository {
   }
 
   async updateReview(
-    data: UpdateReviewDto,
+    data: UpdateReviewDto
   ): Promise<ProductReview | SupplierReview> {
     if (data.productId) {
       const productReview = await this.prismaService.productReview.update({

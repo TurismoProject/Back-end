@@ -21,7 +21,7 @@ import * as bcrypt from 'bcrypt';
 
 @Controller('provedor')
 export class SupplierController {
-  constructor(private readonly repository: AbstractSupplierRepository) { }
+  constructor(private readonly repository: AbstractSupplierRepository) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)

@@ -6,7 +6,7 @@ import { UpdateUserDto } from '@dtos/update-user.dto';
 import { User } from '@prisma/client';
 
 export abstract class AbstractUserRepository {
-  abstract create(user: CreateUserDto): Promise<User>;
+  abstract create(user: CreateUserDto): Promise<AuthModel>;
   abstract createWithGoogle(
     user: CreateUserWithGoogleDto
   ): Promise<GoogleAuthentication>;

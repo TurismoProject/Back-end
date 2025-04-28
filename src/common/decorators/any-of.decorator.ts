@@ -12,8 +12,8 @@ export function AnyOf(properties: string[]) {
             obj[property] !== undefined ||
             otherProps.reduce(
               (acc, prop) => acc && obj[prop] === undefined,
-              true,
-            ),
+              true
+            )
         ),
       ];
 
