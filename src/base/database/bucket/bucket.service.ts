@@ -5,6 +5,7 @@ import { BucketItemFromList, Client } from 'minio';
 export class BucketService implements OnModuleInit, OnModuleDestroy {
   private client: Client;
   private buckets: BucketItemFromList[] = [];
+  private readonly BUCKET_NAME = process.env.PUBLIC_BUCKET_NAME;
 
   async onModuleInit() {
     this.client = new Client({
@@ -15,7 +16,27 @@ export class BucketService implements OnModuleInit, OnModuleDestroy {
       secretKey: process.env.MINIO_SECRET_KEY,
     });
 
-    this.buckets = await this.client.listBuckets();
+    const bucketExists = await this.client.bucketExists(this.BUCKET_NAME);
+    if (!bucketExists) {
+      await this.client.makeBucket(this.BUCKET_NAME);
+      // Set bucket policy to public
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${this.BUCKET_NAME}/*`],
+          },
+        ],
+      };
+
+      await this.client.setBucketPolicy(
+        this.BUCKET_NAME,
+        JSON.stringify(policy)
+      );
+    }
   }
 
   onModuleDestroy() {
@@ -25,18 +46,5 @@ export class BucketService implements OnModuleInit, OnModuleDestroy {
 
   getClient() {
     return this.client;
-  }
-
-  async createBucket(bucketName: string) {
-    const date = new Date();
-    await this.client.makeBucket(bucketName);
-    this.buckets.push({ name: bucketName, creationDate: date });
-    return;
-  }
-
-  async deleteBucket(bucketName: string) {
-    await this.client.removeBucket(bucketName);
-    this.buckets = this.buckets.filter((bucket) => bucket.name !== bucketName);
-    return;
   }
 }

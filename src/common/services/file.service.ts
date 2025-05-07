@@ -5,7 +5,7 @@ import { Injectable } from '@nestjs/common';
 export class FileService {
   constructor(private readonly bucketService: BucketService) {}
 
-  async uploadFile(file: Express.Multer.File, bucket: string) {
+  async uploadFile(file: Express.Multer.File, bucket: string, folder: string) {
     const client = this.bucketService.getClient();
 
     const dateTime = new Date().getTime();
@@ -14,18 +14,25 @@ export class FileService {
       'Content-Type': file.mimetype,
     };
 
-    await client.putObject(bucket, fileName, file.buffer, file.size, metadata);
+    await client.putObject(
+      bucket,
+      `${folder}/${fileName}`,
+      file.buffer,
+      file.size,
+      metadata
+    );
 
     return fileName;
   }
 
-  async deleteFile(fileName: string, bucket: string) {
+  async deleteFile(bucket: string, fileName: string) {
     const client = this.bucketService.getClient();
-    const fileExists = await client.statObject(bucket, fileName);
-    if (!fileExists) {
+    try {
+      await client.statObject(bucket, fileName);
+      await client.removeObject(bucket, fileName);
+      return true;
+    } catch (error) {
       return false;
     }
-    await client.removeObject(bucket, fileName);
-    return true;
   }
 }

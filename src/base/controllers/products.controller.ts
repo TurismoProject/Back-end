@@ -39,13 +39,29 @@ export class ProductsController {
       description: createdProduct.description,
       price: createdProduct.price.toNumber(),
       productId: createdProduct.id,
+      categories: createdProduct.categories,
+      rating: createdProduct.rating.toNumber(),
+      maxGroupSize: createdProduct.maxGroupSize,
+      minAge: createdProduct.minAge,
+      b2bAvailable: createdProduct.b2bAvailable,
+      b2bDiscount: createdProduct.b2bDiscount?.toNumber(),
+      b2bMinQuantity: createdProduct.b2bMinQuantity,
+      bulkAvailability: createdProduct.bulkAvailability,
+      cancellationPolicy: createdProduct.cancellationPolicy,
+      endingPoint: createdProduct.endingPoint,
+      meetingPoint: createdProduct.meetingPoint,
+      excludedItems: createdProduct.excludedItems,
+      includedItems: createdProduct.includedItems,
+      itinerary: createdProduct.itinerary,
+      languages: createdProduct.languages,
+      workingHours: createdProduct.workingHours,
     };
   }
 
   @Post('adicionar-imagem')
   @UseInterceptors(
-    FilesInterceptor('images', 5),
-    FileCountInterceptor({ maxCount: 5 })
+    FilesInterceptor('images'),
+    FileCountInterceptor({ maxCount: 10, minCount: 5 })
   )
   async addImage(
     @UploadedFiles(

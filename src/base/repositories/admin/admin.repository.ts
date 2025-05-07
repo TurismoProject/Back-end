@@ -10,7 +10,7 @@ import {
 import { AbstractAdminRepository } from './abstract-admin.repository';
 import { CreateAdminDto } from '@dtos/create-admin.dto';
 import { UpdateAdminDto } from '@dtos/update-admin.dto';
-import { Admin } from '@prisma/client';
+import { Admin, Role } from '@prisma/client';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { AuthModel } from '@common/models/auth.model';
 import { AuthService } from '@services/auth.service';
@@ -40,7 +40,7 @@ export class AdminRepository implements AbstractAdminRepository {
   async login(email: string, password: string): Promise<AuthModel> {
     const isValidUser = await this.validateAdmin(email, password);
 
-    const token = await this.authService.generateTokens(isValidUser);
+    const token = this.authService.generateTokens(isValidUser);
 
     const authData: AuthModel = {
       accessToken: token.accessToken,
@@ -61,7 +61,7 @@ export class AdminRepository implements AbstractAdminRepository {
     try {
       const usersAdmin = await this.prismaService.admin.findMany({
         where: {
-          role: 'Admin',
+          role: Role.ADMIN,
         },
       });
       return usersAdmin;
@@ -89,7 +89,7 @@ export class AdminRepository implements AbstractAdminRepository {
       const userAdmin = await this.prismaService.admin.findUnique({
         where: {
           id,
-          role: 'Admin',
+          role: Role.ADMIN,
         },
       });
 

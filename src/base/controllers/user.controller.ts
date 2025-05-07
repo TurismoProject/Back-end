@@ -155,7 +155,7 @@ export class UserController {
   @Roles('Admin')
   @Get('buscar/todos')
   // @UseGuards(AuthGuard('jwt'), RolesGuard)
-  async findAll(@Req() req) {
+  async findAll() {
     const users: User[] = await this.repository.findAll();
     return users;
   }

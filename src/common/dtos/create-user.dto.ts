@@ -5,6 +5,8 @@ import {
   IsNotEmpty,
   IsString,
   IsStrongPassword,
+  IsOptional,
+  IsJSON,
 } from 'class-validator';
 
 export class CreateUserDto {
@@ -38,4 +40,12 @@ export class CreateUserDto {
   @IsNotEmpty()
   @IsString()
   address: string;
+
+  @IsString()
+  @IsOptional()
+  avatar?: string;
+
+  @IsJSON()
+  @IsOptional()
+  preferences?: string;
 }

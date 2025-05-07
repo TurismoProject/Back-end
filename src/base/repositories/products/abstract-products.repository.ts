@@ -1,6 +1,6 @@
 import { CreateProductDto } from '@dtos/create-product.dto';
 import { UpdateProductDto } from '@dtos/update-product.dto';
-import { Category, Product, ProductImagesPosition } from '@prisma/client';
+import { Category, Product, WorkingHours } from '@prisma/client';
 
 export abstract class AbstractProductsRepository {
   abstract updateProduct(product: UpdateProductDto): Promise<Product>;
@@ -8,7 +8,11 @@ export abstract class AbstractProductsRepository {
     productId: string,
     imagesPositionsArray: Array<string>
   ): Promise<void>;
-  abstract create(data: CreateProductDto): Promise<Product>;
+  abstract create(
+    data: CreateProductDto
+  ): Promise<
+    { workingHours: Omit<Omit<WorkingHours, 'id'>, 'productId'>[] } & Product
+  >;
   abstract addImageToProduct(
     productId: string,
     image: Express.Multer.File,
@@ -19,13 +23,29 @@ export abstract class AbstractProductsRepository {
   abstract search(
     name?: string,
     category?: Category,
-    rating?: number,
+    minRating?: number,
     productsLimit?: number,
     minPrice?: number,
-    maxPrice?: number
+    maxPrice?: number,
+    maxGroupSize?: number,
+    b2bOnly?: boolean
   ): Promise<Array<Product>>;
-  abstract getHowManyFiles(id: string): Promise<Array<ProductImagesPosition>>;
+  abstract getHowManyFiles(id: string): Promise<Array<string>>;
   abstract deleteProduct(id: string): Promise<null>;
   abstract deleteAllImagesBySupplierId(supplierId: string): Promise<boolean>;
   abstract removeImage(productId: string, imageId: string): Promise<void>;
+  abstract checkAvailability(
+    productId: string,
+    startDate: Date,
+    endDate: Date,
+    guestCount: number
+  ): Promise<boolean>;
+
+  abstract getFilters(): Promise<{
+    categories: Category[];
+    maxPrice: number;
+    minPrice: number;
+    maxGroupSize: number;
+    minRating: number;
+  }>;
 }

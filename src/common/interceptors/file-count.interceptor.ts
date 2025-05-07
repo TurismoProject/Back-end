@@ -8,12 +8,11 @@ import {
   NestInterceptor,
   Type,
 } from '@nestjs/common';
-import { ProductImagesPosition } from '@prisma/client';
 import { isUUID } from 'class-validator';
 import { Request } from 'express';
 
 abstract class RepositoryTemplate {
-  abstract getHowManyFiles(id: string): Promise<Array<ProductImagesPosition>>;
+  abstract getHowManyFiles(id: string): Promise<Array<string>>;
 }
 
 class RequestBodyTemplate {
@@ -23,7 +22,13 @@ class RequestBodyTemplate {
 export function FileCountInterceptor<
   T extends RepositoryTemplate,
   K extends RequestBodyTemplate,
->(options: { maxCount: number }): Type<NestInterceptor> {
+>({
+  maxCount,
+  minCount = 0,
+}: {
+  maxCount: number;
+  minCount?: number;
+}): Type<NestInterceptor> {
   @Injectable()
   class MixinFileCountInterceptor implements NestInterceptor {
     constructor(@Inject('Repository') private repository: T) {}
@@ -40,8 +45,12 @@ export function FileCountInterceptor<
         const filesCount = Array.isArray(request.files)
           ? request.files.length
           : 0;
-        if (filesArray.length + filesCount > options.maxCount) {
+        if (filesArray.length + filesCount > maxCount) {
           throw new BadRequestException('Max file count exceeded');
+        }
+
+        if (filesArray.length + filesCount < minCount) {
+          throw new BadRequestException('Min file count exceeded');
         }
 
         return next.handle();
