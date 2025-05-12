@@ -1,27 +1,38 @@
 import { MailerService } from '@nestjs-modules/mailer/dist/mailer.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { Admin, Supplier, User } from '@prisma/client';
 
 @Injectable()
 export class EmailService {
 
-    constructor(private readonly MailerService: MailerService) { }
+    constructor(private readonly mailerService: MailerService) { }
 
-    async sendEmailUsers(user: User | Admin | Supplier, to: string, subject: string, template: string): Promise<boolean> {
+    async sendEmail(to: string, subject: string, text: string): Promise<void> {
         try {
-            const isSend: boolean = await this.MailerService.sendMail({
-                subject,
+            await this.mailerService.sendMail({
                 to,
-                template: template,
-                context: {
-                    code: Math.floor(100000 + Math.random() * 900000),
-                    name: user.name,
-                    link: '',
-                },
+                subject,
+                text,
             });
-            return isSend;
         } catch (error) {
-            throw new InternalServerErrorException(`Failed to send email: ${error.message}`);
+            throw new InternalServerErrorException(`erro ao enviar email para o destinatário ${to}: ${error}`);
+        }
+    }
+
+    async sendEmailWithTemplate(
+        to: string,
+        subject: string,
+        template: string,
+        context: any
+    ) {
+        try {
+            await this.mailerService.sendMail({
+                to,
+                subject,
+                template,
+                context,
+            });
+        } catch (error) {
+            throw new InternalServerErrorException(`erro ao enviar email para o destinatário ${to}: ${error.message}`);
         }
     }
 }
