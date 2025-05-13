@@ -24,7 +24,7 @@ export class AuthenticateRepository implements AbstractAuthenticateRepository {
 
   async authenticateUser(authData: AuthModel): Promise<UserJWTs> {
     const { authId, refreshToken, expirationDateRefreshToken } = authData;
-    const expirationDate = new Date(expirationDateRefreshToken);
+    const expirationDate = new Date(Number(expirationDateRefreshToken) * 1000);
 
     const savedJWT = await this.prismaService.userJWTs.create({
       data: {
@@ -39,7 +39,7 @@ export class AuthenticateRepository implements AbstractAuthenticateRepository {
 
   async authenticateSupplier(authData: AuthModel): Promise<SupplierJWTs> {
     const { authId, refreshToken, expirationDateRefreshToken } = authData;
-    const expirationDate = new Date(expirationDateRefreshToken);
+    const expirationDate = new Date(Number(expirationDateRefreshToken) * 1000);
 
     const savedJWT = await this.prismaService.supplierJWTs.create({
       data: {

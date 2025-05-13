@@ -14,10 +14,12 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { AbstractSupplierRepository } from '@repositories/suppliers/abstract-supplier.repository';
 import { isUUID } from 'class-validator';
-import * as bcrypt from 'bcrypt';
+import { AuthGuard } from '@nestjs/passport';
+import { Roles } from '@decorators/user-roles.decorator';
 
 @Controller('provedor')
 export class SupplierController {
@@ -55,17 +57,13 @@ export class SupplierController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async loginSupplier(@Body() body: { email: string; password: string }) {
-    const supplier = await this.repository.getByEmail(body.email);
-
-    if (!supplier) throw new NotFoundException('Supplier not found');
-
-    if (!(await bcrypt.compare(body.password, supplier.password)))
-      throw new ConflictException('Invalid password');
+    const { email, password } = body;
+    const tokens = await this.repository.login(email, password);
 
     return {
-      companyName: supplier.name,
-      email: supplier.email,
-      password: supplier.password,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+      message: 'Login successful',
     };
   }
 
@@ -85,5 +83,22 @@ export class SupplierController {
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteSupplier(@Body('uuid', new ParseUUIDPipe()) uuid: string) {
     return await this.repository.delete(uuid);
+  }
+
+  @Get('dashboard')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard('jwt'))
+  @Roles('SUPPLIER')
+  async getSupplierDashboard(@Headers('Authorization') jwt: string) {
+    try {
+      const token = jwt.split(' ')[1];
+      const dashboardData = await this.repository.getDashboardData(token);
+      return dashboardData;
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new ConflictException('Error retrieving dashboard data');
+    }
   }
 }

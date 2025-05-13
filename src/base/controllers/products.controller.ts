@@ -125,16 +125,16 @@ export class ProductsController {
     @Query('categoria', CategoryValidatorPipe) category: Category,
     @Query('estrelas') rating: number,
     @Query('limite', new ParseIntPipe({ optional: true }))
-    productsLimit: number,
+    productsLimit: number = 20,
     @Query('min') minPrice: number,
     @Query('max') maxPrice: number
   ) {
     const products = (
       await this.repository.search(
+        productsLimit,
         undefined,
         category,
         rating,
-        productsLimit,
         minPrice,
         maxPrice
       )
@@ -176,10 +176,10 @@ export class ProductsController {
   ) {
     const products = (
       await this.repository.search(
+        productsLimit,
         name,
         category,
         rating,
-        productsLimit,
         minPrice,
         maxPrice
       )

@@ -107,12 +107,19 @@ export class UserController {
 
   @Post('relogar')
   @UseGuards(AuthGuard('jwt'))
-  async refreshJWT(@Body() body: { refreshToken: string }) {
-    const logIn: AuthModel = await this.repository.refreshJWT(
-      body.refreshToken
-    );
+  async refreshJWT(@Headers('Authorization') refreshTokenWithBearer: string) {
+    const refreshToken = refreshTokenWithBearer.split(' ')[1];
+    const logIn: AuthModel = await this.repository.refreshJWT(refreshToken);
 
     return logIn;
+  }
+
+  @Post('logout')
+  @UseGuards(AuthGuard('jwt'))
+  async logout(@Headers('Authorization') refreshTokenWithBearer: string) {
+    const refreshToken = refreshTokenWithBearer.split(' ')[1];
+    await this.repository.logout(refreshToken);
+    return { message: 'Logout realizado com sucesso' };
   }
 
   // @UseGuards(LocalAuthGuard)
@@ -126,7 +133,7 @@ export class UserController {
   }
 
   @Get('informacoes')
-  @Roles('admin')
+  // @Roles('admin')
   @UseGuards(AuthGuard('jwt'))
   async getUser(@Headers('Authorization') authorization: string) {
     const accessToken = authorization.split(' ')[1];

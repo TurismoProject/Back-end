@@ -218,10 +218,10 @@ export class ProductsRepository implements AbstractProductsRepository {
   }
 
   async search(
+    productsLimit: number = 20,
     name?: string,
     category?: Category,
     minRating?: number,
-    productsLimit?: number,
     minPrice?: number,
     maxPrice?: number,
     maxGroupSize?: number,

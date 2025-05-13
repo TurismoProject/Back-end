@@ -21,10 +21,10 @@ export abstract class AbstractProductsRepository {
   abstract findAll(supplierId?: string): Promise<Array<Product>>;
   abstract findProductById(id: string): Promise<Product>;
   abstract search(
+    productsLimit?: number,
     name?: string,
     category?: Category,
     minRating?: number,
-    productsLimit?: number,
     minPrice?: number,
     maxPrice?: number,
     maxGroupSize?: number,
