@@ -4,11 +4,12 @@ import { Module } from '@nestjs/common';
 import { AbstractAdminRepository } from '@repositories/admin/abstract-admin.repository';
 import { AdminRepository } from '@repositories/admin/admin.repository';
 import { AuthModule } from './auth.module';
+import { EmailModule } from './email.module';
 
 @Module({
-  imports: [DatabaseModule, AuthModule],
+  imports: [DatabaseModule, AuthModule, EmailModule],
   controllers: [AdminController],
   providers: [{ provide: AbstractAdminRepository, useClass: AdminRepository }],
   exports: [],
 })
-export class AdminModule {}
+export class AdminModule { }

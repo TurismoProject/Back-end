@@ -5,7 +5,7 @@ import { SupplierModule } from '@modules/supplier.module';
 import { AdminModule } from '@modules/admin.module';
 import { ConfigModule } from '@nestjs/config';
 import configuration from '@config/configuration';
-import { EmailModule } from './mail.module';
+import { EmailModule } from './email.module';
 
 @Module({
   imports: [
@@ -18,7 +18,7 @@ import { EmailModule } from './mail.module';
     UserModule,
     ProductsModule,
     SupplierModule,
-    // EmailModule,
+    EmailModule,
   ],
   controllers: [],
   providers: [],

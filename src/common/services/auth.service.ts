@@ -34,6 +34,22 @@ export class AuthService {
     }
   }
 
+  public generateResetToken(user: User | Admin | Supplier) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    };
+
+    const token = this.jwtService.sign({ ...payload, exp: Math.floor(Date.now() / 1000) + (2 * 24 * 60 * 60) });
+    const tokenObject = this.jwtService.decode(token);
+    const { exp } = tokenObject;
+    return {
+      token,
+      exp,
+    };
+  }
+
   private generateJwtToken(
     user: User | Admin | Supplier,
     expiration: string = '15d'
@@ -51,5 +67,6 @@ export class AuthService {
       token,
       exp,
     };
+
   }
 }

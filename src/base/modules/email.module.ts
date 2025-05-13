@@ -4,9 +4,9 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 import { ConfigModule } from '@nestjs/config';
 import { SESClient } from '@aws-sdk/client-ses';
-import * as nodemailer from 'nodemailer';
 import * as aws from '@aws-sdk/client-ses';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
+import { EmailService } from '@services/email.service';
 
 @Module({
     imports: [
@@ -43,6 +43,7 @@ import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
             },
         }),
     ],
-    exports: [MailerModule],
+    providers: [EmailService],
+    exports: [EmailService],
 })
 export class EmailModule { }

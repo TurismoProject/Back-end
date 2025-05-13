@@ -33,6 +33,13 @@ export class AdminController {
     return logIn;
   }
 
+  @Post('forgot-password')
+  async forgetPasswordAdmin() {
+    const response = console.log()//await this.repository.forgetPasswordAdmin();
+    return response;
+
+  }
+
   @Post('cadastro')
   @UsePipes(new PasswordHasherPipe<CreateAdminDto>())
   async createAdmin(

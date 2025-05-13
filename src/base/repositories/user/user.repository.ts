@@ -17,15 +17,40 @@ import { AuthModel } from '@common/models/auth.model';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
 import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
 import { GoogleAuthentication } from '@common/models/user-google-authenticate.model';
+import { EmailService } from '@services/email.service';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly authService: AuthService,
+    private readonly emailService: EmailService,
     private readonly authRepository: AbstractAuthenticateRepository
   ) { }
+  async sendUserPasswordResetLink(email: string): Promise<string> {
+    const user = await this.findByEmail(email);
 
+    const token = this.authService.generateResetToken(user);
+
+    const authData: AuthModel = {
+      authId: user.id,
+      refreshToken: token.token,
+      accessToken: token.token,
+      expirationDateRefreshToken: token.exp,
+    };
+
+    const authUser = await this.authRepository.authenticateUser(authData);
+    const resetLink = `http://localhost:3000/reset-password/${authUser.token}`;
+
+    const sendEmail = await this.emailService.sendEmail(
+      user.email,
+      'Recuperação de senha',
+      `Clique no link para recuperar sua senha: ${resetLink}`,
+    );
+
+    return sendEmail.message;
+
+  }
   async createWithGoogle(user: CreateUserWithGoogleDto): Promise<GoogleAuthentication> {
     try {
       const createdUserWithGoogle = await this.prismaService.user.create({

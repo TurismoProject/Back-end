@@ -16,4 +16,5 @@ export abstract class AbstractUserRepository {
   abstract findAll(): Promise<User[]>;
   abstract updateUser(id: string, user: UpdateUserDto): Promise<User>;
   abstract deleteUser(id: string): Promise<User>;
+  abstract sendUserPasswordResetLink(email: string): Promise<string>;
 }
