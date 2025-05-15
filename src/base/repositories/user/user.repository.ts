@@ -20,6 +20,8 @@ import { GoogleAuthentication } from '@common/models/user-google-authenticate.mo
 import { EmailService } from '@services/email.service';
 import { AuthResetPassModel } from '@common/models/auth-resetpass.model';
 import { ResetPassword } from '@common/models/reset-password.model';
+import { UpdatePasswordDto } from '@dtos/update-new-password.dto';
+import { ResponseResetPassModel } from '@common/models/response-resetpass.model';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
@@ -29,6 +31,32 @@ export class UserRepository implements AbstractUserRepository {
     private readonly emailService: EmailService,
     private readonly authRepository: AbstractAuthenticateRepository
   ) { }
+  async resetPassword(PasswordDto: UpdatePasswordDto): Promise<ResponseResetPassModel> {
+
+    const user = await this.authRepository.searchUserJWT(PasswordDto.token, JwtTokenType.reset);
+
+    if (!user) {
+      throw new BadRequestException('Token inválido');
+    }
+
+    const updatePassword = await this.prismaService.user.update({
+      where: {
+        id: user.userId,
+      },
+      data: {
+        password: PasswordDto.newPassword,
+      },
+
+    });
+
+    const responseData: ResponseResetPassModel = {
+      user: updatePassword,
+      message: 'Senha atualizada com sucesso',
+    };
+
+    return responseData;
+  }
+
   async sendUserPasswordResetLink(email: string): Promise<ResetPassword> {
     const user = await this.findByEmail(email);
     const token = this.authService.generateResetToken(user);

@@ -1,7 +1,7 @@
 import { PrismaService } from '@database/prisma/prisma.service';
 import { AbstractAuthenticateRepository } from './abstract-authenticate.repository';
 import { AuthModel } from '@common/models/auth.model';
-import { AdminJWTs, SupplierJWTs, UserJWTs } from '@prisma/client';
+import { AdminJWTs, JwtTokenType, SupplierJWTs, UserJWTs } from '@prisma/client';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AuthResetPassModel } from '@common/models/auth-resetpass.model';
 
@@ -72,9 +72,9 @@ export class AuthenticateRepository implements AbstractAuthenticateRepository {
     return adminJWT;
   }
 
-  async searchUserJWT(jwt: string): Promise<UserJWTs> {
+  async searchUserJWT(jwt: string, type?: JwtTokenType): Promise<UserJWTs> {
     const userJWT = await this.prismaService.userJWTs.findUnique({
-      where: { token: jwt },
+      where: { token: jwt, AND: { type: { equals: type ?? JwtTokenType.acess } } },
     });
     return userJWT;
   }

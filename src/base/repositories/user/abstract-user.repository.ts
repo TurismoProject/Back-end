@@ -1,8 +1,10 @@
 import { AuthModel } from '@common/models/auth.model';
 import { ResetPassword } from '@common/models/reset-password.model';
+import { ResponseResetPassModel } from '@common/models/response-resetpass.model';
 import { GoogleAuthentication } from '@common/models/user-google-authenticate.model';
 import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
 import { CreateUserDto } from '@dtos/create-user.dto';
+import { UpdatePasswordDto } from '@dtos/update-new-password.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
 import { User } from '@prisma/client';
 
@@ -18,4 +20,5 @@ export abstract class AbstractUserRepository {
   abstract updateUser(id: string, user: UpdateUserDto): Promise<User>;
   abstract deleteUser(id: string): Promise<User>;
   abstract sendUserPasswordResetLink(email: string): Promise<ResetPassword>;
+  abstract resetPassword(PasswordDto: UpdatePasswordDto): Promise<ResponseResetPassModel>;
 }

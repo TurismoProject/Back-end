@@ -8,6 +8,7 @@ import { Roles } from '@decorators/user-roles.decorator';
 import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
 import { CreateUserDto } from '@dtos/create-user.dto';
 import { LoginDto } from '@dtos/login.dto';
+import { UpdatePasswordDto } from '@dtos/update-new-password.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
 import {
   Body,
@@ -84,9 +85,15 @@ export class UserController {
   }
 
   @Post('forgot-password')
-
   async forgetPasswordUser(@Body() body: { email: string }) {
     const response = await this.repository.sendUserPasswordResetLink(body.email);
+    return response;
+  }
+
+  @UsePipes(new PasswordHasherPipe<CreateUserDto>())
+  @Put('reset-password')
+  async resetPasswordUser(@Body() data: UpdatePasswordDto) {
+    const response = await this.resetPasswordUser(data);
     return response;
   }
 
