@@ -40,14 +40,13 @@ export class AuthenticateRepository implements AbstractAuthenticateRepository {
   }
 
   async savingRecoveryToken(authData: AuthResetPassModel): Promise<UserJWTs> {
-    const expirationDate = new Date(Number(authData.expirationDateToken) * 1000)
 
     const savedToken = await this.prismaService.userJWTs.create({
       data: {
-        token: authData.Token,
-        expiresAt: expirationDate,
+        token: authData.token,
+        expiresAt: authData.expirationDateToken,
         userId: authData.authId,
-          
+        type: authData.type
       },
     });
     return savedToken;

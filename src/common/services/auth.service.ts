@@ -2,6 +2,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { Admin, Supplier, User } from '@prisma/client';
 import { AuthModel } from '@common/models/auth.model';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -35,18 +36,12 @@ export class AuthService {
   }
 
   public generateResetToken(user: User | Admin | Supplier) {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    };
+    const token = randomBytes(32).toString('hex');
+    const expiration = new Date(Date.now() + 30 * 60 * 1000);
 
-    const token = this.jwtService.sign({ ...payload, exp: Math.floor(Date.now() / 1000) + (2 * 24 * 60 * 60) });
-    const tokenObject = this.jwtService.decode(token);
-    const { exp } = tokenObject;
     return {
       token,
-      exp,
+      exp: expiration,
     };
   }
 

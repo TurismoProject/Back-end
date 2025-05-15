@@ -1,8 +1,7 @@
 import { JwtTokenType } from "@prisma/client";
-
 export class AuthResetPassModel {
-    Token: string;
+    token: string;
     authId: string;
-    expirationDateToken: number;
+    expirationDateToken: Date;
     type?: JwtTokenType
 }
