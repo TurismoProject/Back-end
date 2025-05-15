@@ -1,8 +1,13 @@
+// email.module.ts
 import { Module } from '@nestjs/common';
 import { MailerModule } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
+import { SESClient } from '@aws-sdk/client-ses';
+import * as aws from '@aws-sdk/client-ses';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
-import { ConfigService } from '@nestjs/config/dist/config.service';
-import { ConfigModule } from '@nestjs/config/dist/config.module';
+import { EmailService } from '@services/email.service';
+import { join } from 'path';
 
 @Module({
     imports: [
@@ -12,29 +17,32 @@ import { ConfigModule } from '@nestjs/config/dist/config.module';
         MailerModule.forRootAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
-            useFactory: async (configService: ConfigService) => ({
-                transport: {
-                    host: configService.get<string>('HOST'),
-                    port: configService.get<number>('PORT_EMAIL'),
-                    auth: {
-                        user: configService.get<string>('USER'),
-                        pass: configService.get<string>('PASS'),
+            useFactory: async (configService: ConfigService) => {
+                const ses = new SESClient({
+                    region: configService.get<string>('AWS_REGION'),
+                    credentials: {
+                        accessKeyId: configService.get<string>('AWS_ACCESS_KEY_ID'),
+                        secretAccessKey: configService.get<string>('AWS_SECRET_ACCESS_KEY'),
                     },
-                },
-                defaults: {
-                    from: configService.get<string>('EMAIL_DEFAULT'),
-                },
-                template: {
-                    dir: __dirname + '/config/templates',
-                    adapter: new PugAdapter(),
-                    options: {
-                        strict: true,
+                });
+
+                return {
+                    transport: {
+                        SES: { ses, aws },
                     },
-                },
-            }),
+                    defaults: {
+                        from: configService.get<string>('EMAIL_DEFAULT'),
+                    },
+                    template: {
+                        dir: join(process.cwd(), 'dist', 'templates'),
+                        adapter: new PugAdapter(),
+                        options: { strict: true },
+                    }
+                };
+            },
         }),
     ],
-
-    exports: [MailerModule],
+    providers: [EmailService],
+    exports: [EmailService],
 })
 export class EmailModule { }

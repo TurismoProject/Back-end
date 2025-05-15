@@ -83,6 +83,13 @@ export class UserController {
     return logIn;
   }
 
+  @Post('forgot-password')
+
+  async forgetPasswordUser(@Body() body: { email: string }) {
+    const response = await this.repository.sendUserPasswordResetLink(body.email);
+    return response;
+  }
+
   // @UseGuards(LocalAuthGuard)
   @Put('atualizar/:id')
   @Roles('admin')

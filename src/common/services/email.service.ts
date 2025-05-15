@@ -1,27 +1,24 @@
 import { MailerService } from '@nestjs-modules/mailer/dist/mailer.service';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { Admin, Supplier, User } from '@prisma/client';
+import { SentMessageInfo } from 'nodemailer';
 
 @Injectable()
 export class EmailService {
-
-    constructor(private readonly MailerService: MailerService) { }
-
-    async sendEmailUsers(user: User | Admin | Supplier, to: string, subject: string, template: string): Promise<boolean> {
+    constructor(private readonly mailerService: MailerService) { }
+    async sendEmail(to: string, subject: string, resetLink: string): Promise<SentMessageInfo> {
         try {
-            const isSend: boolean = await this.MailerService.sendMail({
-                subject,
+            const response = await this.mailerService.sendMail({
                 to,
-                template: template,
+                subject,
+                template: 'forget',
                 context: {
-                    code: Math.floor(100000 + Math.random() * 900000),
-                    name: user.name,
-                    link: '',
-                },
+                    resetLink
+                }
             });
-            return isSend;
+
+            return { response };
         } catch (error) {
-            throw new InternalServerErrorException(`Failed to send email: ${error.message}`);
+            throw new InternalServerErrorException('Erro ao enviar o e-mail de recuperação de senha.');
         }
     }
 }

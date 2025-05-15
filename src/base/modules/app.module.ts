@@ -18,7 +18,7 @@ import { EmailModule } from './email.module';
     UserModule,
     ProductsModule,
     SupplierModule,
-    // EmailModule,
+    EmailModule,
   ],
   controllers: [],
   providers: [],

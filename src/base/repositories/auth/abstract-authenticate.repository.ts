@@ -1,8 +1,10 @@
+import { AuthResetPassModel } from '@common/models/auth-resetpass.model';
 import { AuthModel } from '@common/models/auth.model';
 import { AdminJWTs, SupplierJWTs, UserJWTs } from '@prisma/client';
 
 export abstract class AbstractAuthenticateRepository {
   abstract authenticateUser(authData: AuthModel): Promise<UserJWTs>;
+  abstract savingRecoveryToken(authData: AuthResetPassModel): Promise<UserJWTs>
   abstract authenticateAdmin(authData: AuthModel): Promise<AdminJWTs>;
   abstract authenticateSupplier(authData: AuthModel): Promise<SupplierJWTs>;
   abstract searchUserJWT(jwt: string): Promise<UserJWTs>;

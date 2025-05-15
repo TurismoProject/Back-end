@@ -11,20 +11,58 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { JwtTokenType, User } from '@prisma/client';
 import { AbstractUserRepository } from './abstract-user.repository';
 import { AuthModel } from '@common/models/auth.model';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
 import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
 import { GoogleAuthentication } from '@common/models/user-google-authenticate.model';
+import { EmailService } from '@services/email.service';
+import { AuthResetPassModel } from '@common/models/auth-resetpass.model';
+import { ResetPassword } from '@common/models/reset-password.model';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly authService: AuthService,
+    private readonly emailService: EmailService,
     private readonly authRepository: AbstractAuthenticateRepository
   ) { }
+  async sendUserPasswordResetLink(email: string): Promise<ResetPassword> {
+    const user = await this.findByEmail(email);
+    const token = this.authService.generateResetToken(user);
+
+    const authData: AuthResetPassModel = {
+      token: token.token,
+      authId: user.id,
+      expirationDateToken: token.exp,
+      type: JwtTokenType.reset,
+    };
+
+    const resetLink = `http://localhost:3000/reset-password/${token.token}`;
+
+    try {
+      await this.emailService.sendEmail(
+        user.email,
+        'Recuperação de senha',
+        resetLink
+      );
+
+      await this.authRepository.savingRecoveryToken(authData);
+
+      const response: ResetPassword = {
+        message: 'Email enviado com sucesso',
+        email: user.email,
+        Type: JwtTokenType.reset,
+      };
+
+      return response;
+
+    } catch (error) {
+      throw new InternalServerErrorException(`erro ao enviar email para o destinatário ${user.email}: ${error}`);
+    }
+  }
 
   async createWithGoogle(user: CreateUserWithGoogleDto): Promise<GoogleAuthentication> {
     try {

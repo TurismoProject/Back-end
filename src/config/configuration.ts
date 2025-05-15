@@ -9,10 +9,10 @@ export default () => ({
     USER_EMAIL: process.env.USER_EMAIL,
     PASS: process.env.PASS,
     EMAIL_DEFAULT: process.env.EMAIL_DEFAULT,
-    database: {
-        host: process.env.DATABASE_HOST,
-        port: parseInt(process.env.DATABASE_PORT, 10) || 5432
-    },
+    // database: {
+    //     host: process.env.DATABASE_HOST,
+    //     port: parseInt(process.env.DATABASE_PORT, 10) || 5432
+    // },
     google: {
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
