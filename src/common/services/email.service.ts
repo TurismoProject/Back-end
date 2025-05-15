@@ -11,8 +11,9 @@ export class EmailService {
                 to,
                 subject,
                 text,
+                template: 'forget'
             });
-            return response;
+            return {response};
         } catch (error) {
             throw new InternalServerErrorException(`erro ao enviar email para o destinatário ${to}: ${error}`);
         }

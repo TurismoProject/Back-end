@@ -7,6 +7,7 @@ import { SESClient } from '@aws-sdk/client-ses';
 import * as aws from '@aws-sdk/client-ses';
 import { PugAdapter } from '@nestjs-modules/mailer/dist/adapters/pug.adapter';
 import { EmailService } from '@services/email.service';
+import { join } from 'path';
 
 @Module({
     imports: [
@@ -33,12 +34,10 @@ import { EmailService } from '@services/email.service';
                         from: configService.get<string>('EMAIL_DEFAULT'),
                     },
                     template: {
-                        dir: __dirname + '/config/templates',
+                        dir: join(process.cwd(), 'dist', 'templates'),
                         adapter: new PugAdapter(),
-                        options: {
-                            strict: true,
-                        },
-                    },
+                        options: { strict: true },
+                    }
                 };
             },
         }),

@@ -2,7 +2,9 @@ import { PrismaService } from '@database/prisma/prisma.service';
 import { AbstractAuthenticateRepository } from './abstract-authenticate.repository';
 import { AuthModel } from '@common/models/auth.model';
 import { AdminJWTs, SupplierJWTs, UserJWTs } from '@prisma/client';
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { AuthResetPassModel } from '@common/models/auth-resetpass.model';
+import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
 
 @Injectable()
 export class AuthenticateRepository implements AbstractAuthenticateRepository {
@@ -35,6 +37,20 @@ export class AuthenticateRepository implements AbstractAuthenticateRepository {
     });
 
     return savedJWT;
+  }
+
+  async savingRecoveryToken(authData: AuthResetPassModel): Promise<UserJWTs> {
+    const expirationDate = new Date(Number(authData.expirationDateToken) * 1000)
+
+    const savedToken = await this.prismaService.userJWTs.create({
+      data: {
+        token: authData.Token,
+        expiresAt: expirationDate,
+        userId: authData.authId,
+          
+      },
+    });
+    return savedToken;
   }
 
   async authenticateSupplier(authData: AuthModel): Promise<SupplierJWTs> {

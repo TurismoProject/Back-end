@@ -11,13 +11,14 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { JwtTokenType, User } from '@prisma/client';
 import { AbstractUserRepository } from './abstract-user.repository';
 import { AuthModel } from '@common/models/auth.model';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
 import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
 import { GoogleAuthentication } from '@common/models/user-google-authenticate.model';
 import { EmailService } from '@services/email.service';
+import { AuthResetPassModel } from '@common/models/auth-resetpass.model';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
@@ -32,14 +33,14 @@ export class UserRepository implements AbstractUserRepository {
 
     const token = this.authService.generateResetToken(user);
 
-    const authData: AuthModel = {
+    const authData: AuthResetPassModel = {
+      Token: token.token,
       authId: user.id,
-      refreshToken: token.token,
-      accessToken: token.token,
-      expirationDateRefreshToken: token.exp,
+      expirationDateToken: token.exp,
+      type: JwtTokenType.reset,
     };
 
-    const authUser = await this.authRepository.authenticateUser(authData);
+    const authUser = await this.authRepository.savingRecoveryToken(authData);
     const resetLink = `http://localhost:3000/reset-password/${authUser.token}`;
 
     const sendEmail = await this.emailService.sendEmail(
@@ -48,7 +49,7 @@ export class UserRepository implements AbstractUserRepository {
       `Clique no link para recuperar sua senha: ${resetLink}`,
     );
 
-    return sendEmail.message;
+    return sendEmail.response;
 
   }
   async createWithGoogle(user: CreateUserWithGoogleDto): Promise<GoogleAuthentication> {
