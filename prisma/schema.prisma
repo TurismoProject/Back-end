@@ -1,0 +1,99 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Admin
+  User
+  Supplier
+}
+
+enum JwtTokenType {
+  acess
+  reset
+}
+
+model Admin {
+  id       String      @id @default(uuid())
+  email    String      @unique
+  password String
+  name     String
+  role     Role        @default(Admin)
+  adminJWT AdminJWTs[]
+}
+
+model User {
+  id          String     @id @default(uuid())
+  email       String     @unique
+  password    String
+  name        String
+  cpf         String     @unique
+  googleId    String?    @unique 
+  birthday    String
+  phoneNumber String     @unique
+  address     String
+  role        Role       @default(User)
+  userJWT     UserJWTs[]
+}
+
+model Supplier {
+  id          String         @id @default(uuid())
+  email       String         @unique
+  password    String
+  name        String
+  cnpj        String         @unique
+  phoneNumber String
+  address     String
+  role        Role           @default(Supplier)
+  products    Product[]
+  supplierJWT SupplierJWTs[]
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Decimal
+  imagesUrl   String[]
+  supplierId  String
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+}
+
+model UserJWTs {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      JwtTokenType @default(acess)
+}
+
+model SupplierJWTs {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  type       JwtTokenType @default(acess)
+}
+
+model AdminJWTs {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  adminId   String   //@unique
+  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  type      JwtTokenType @default(acess)
+}

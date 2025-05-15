@@ -4,7 +4,6 @@ import { AuthModel } from '@common/models/auth.model';
 import { AdminJWTs, SupplierJWTs, UserJWTs } from '@prisma/client';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { AuthResetPassModel } from '@common/models/auth-resetpass.model';
-import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
 
 @Injectable()
 export class AuthenticateRepository implements AbstractAuthenticateRepository {
