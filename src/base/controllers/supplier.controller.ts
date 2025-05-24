@@ -12,7 +12,7 @@ import {
   HttpStatus,
   NotFoundException,
   ParseUUIDPipe,
-  Patch,
+  Put,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -29,13 +29,13 @@ export class SupplierController {
   @HttpCode(HttpStatus.OK)
   async getSupplier(@Headers('uuid') uuid: string) {
     if (!uuid) {
-      const suppliers = await this.repository.getAll();
+      const suppliers = await this.repository.findAll();
       return suppliers;
     }
 
     if (!isUUID(uuid)) throw new ConflictException('Invalid UUID');
 
-    const supplier = await this.repository.getByUUID(uuid);
+    const supplier = await this.repository.findById(uuid);
     return supplier;
   }
 
@@ -44,7 +44,6 @@ export class SupplierController {
   async createSupplier(
     @Body(new PasswordHasherPipe()) body: CreateSupplierDto
   ) {
-    console.log(body.password);
     const supplier = await this.repository.create(body);
 
     return {
@@ -67,10 +66,10 @@ export class SupplierController {
     };
   }
 
-  @Patch('atualizar')
+  @Put('atualizar')
   @HttpCode(HttpStatus.OK)
   async updateSupplier(@Body() body: UpdateSupplierDto) {
-    const supplier = await this.repository.update(body);
+    const supplier = await this.repository.update(body.id, body);
 
     return {
       companyName: supplier.name,

@@ -1,24 +1,107 @@
 import { AbstractProductsRepository } from './abstract-products.repository';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { Product, Category, DayOfWeek, WorkingHours } from '@prisma/client';
+import { Product, DayOfWeek, WorkingHours, $Enums } from '@prisma/client';
 import { CreateProductDto } from '@dtos/create-product.dto';
 import { UpdateProductDto } from '@dtos/update-product.dto';
-import { FileService } from '@services/file.service';
 import { v4 as uuidv4 } from 'uuid';
-import { removeProperty } from '@utils/utils';
+import { removePropertyForEach } from '@utils/utils';
+import { ProductImageService } from '@services/product-image.service';
+import { SearchProductDto } from '@dtos/search-product.dto';
+import { AvailabilityParamsDto } from '@dtos/availability-params.dto';
+import { ProductFiltersDto } from '@dtos/filter-product.dto';
+import { BaseRepository } from '@common/repositories/base.repository';
+import { Decimal, JsonValue } from '@prisma/client/runtime/library';
 
 @Injectable()
-export class ProductsRepository implements AbstractProductsRepository {
+export class ProductsRepository
+  extends BaseRepository<Product, CreateProductDto, UpdateProductDto>
+  implements AbstractProductsRepository
+{
   constructor(
-    private readonly prismaService: PrismaService,
-    private readonly fileService: FileService
-  ) {}
+    protected readonly prismaService: PrismaService,
+    private readonly productImageService: ProductImageService
+  ) {
+    super(prismaService);
+  }
 
-  async updateProduct(product: UpdateProductDto): Promise<Product> {
+  protected get model() {
+    return this.prismaService.product;
+  }
+
+  override findAll: never;
+
+  async create(
+    data: CreateProductDto
+  ): Promise<
+    Product & { workingHours: Omit<Omit<WorkingHours, 'id'>, 'productId'>[] }
+  > {
+    const id = uuidv4();
+    const product = await this.prismaService.product.create({
+      data: {
+        id,
+        description: data.description,
+        name: data.name,
+        price: data.price,
+        supplier: {
+          connect: {
+            id: data.supplierId,
+          },
+        },
+        categories: data.categories,
+        duration: data.duration,
+        maxGroupSize: data.maxGroupSize || 1,
+        cancellationPolicy: data.cancellationPolicy,
+        endingPoint: data.endingPoint,
+        meetingPoint: data.meetingPoint,
+        minAge: data.minAge,
+        languages: data.languages,
+        excludedItems: data.excludedItems,
+        includedItems: data.includedItems,
+        itinerary: data.itinerary,
+        b2bAvailable: data.b2bAvailable || false,
+        b2bMinQuantity: data.b2bMinQuantity,
+        b2bDiscount: data.b2bDiscount,
+        bulkAvailability: data.bulkAvailability || 0,
+        workingHours: {
+          create: this.mapWorkingHoursForCreate(data.workingHours),
+        },
+      },
+      include: {
+        workingHours: true,
+      },
+    });
+
+    // Process working hours for return
+    if (product.workingHours) {
+      removePropertyForEach(product.workingHours, 'id');
+      removePropertyForEach(product.workingHours, 'productId');
+    }
+
+    return product;
+  }
+
+  async findById(id: string): Promise<Product> {
+    const product = await this.model.findUnique({
+      where: { id },
+      include: {
+        reviews: true,
+        availability: true,
+        workingHours: true,
+      },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+
+    return product;
+  }
+
+  async update(id: string, product: UpdateProductDto): Promise<Product> {
     try {
-      const updatedProduct = await this.prismaService.product.update({
-        where: { id: product.id },
+      return await this.model.update({
+        where: { id },
         data: {
           description: product.description,
           name: product.name,
@@ -37,329 +120,136 @@ export class ProductsRepository implements AbstractProductsRepository {
           bulkAvailability: product.bulkAvailability,
           workingHours: {
             deleteMany: {},
-            create:
-              product.workingHours?.map((schedule) => ({
-                dayOfWeek: schedule.dayOfWeek,
-                startTime: schedule.startTime,
-                endTime: schedule.endTime,
-                isAvailable: schedule.isAvailable ?? true,
-              })) || [],
+            create: this.mapWorkingHoursForCreate(product.workingHours),
           },
         },
         include: {
           workingHours: true,
         },
       });
-      return updatedProduct;
     } catch (error) {
-      throw new NotFoundException('Product not found');
+      if (error.code === 'P2025') {
+        throw new NotFoundException('Product not found');
+      }
+      throw error; // Re-throw other errors for proper handling
     }
+  }
+
+  async delete(id: string): Promise<null> {
+    const product = await this.findById(id);
+
+    // Delete all images associated with the product
+    for (const image of product.images) {
+      await this.removeImage(id, image);
+    }
+
+    await super.delete(id);
+    return null;
+  }
+
+  async findAllSupplierProducts(): Promise<Array<Product>> {
+    return this.model.findMany({
+      include: {
+        workingHours: true,
+        reviews: true,
+        availability: true,
+      },
+    });
+  }
+
+  // Image management methods - delegating to ProductImageService
+  async addImageToProduct(
+    productId: string,
+    image: Express.Multer.File
+  ): Promise<string> {
+    return this.productImageService.addImageToProduct(productId, image);
+  }
+
+  async removeImage(productId: string, image: string): Promise<void> {
+    return this.productImageService.removeImage(productId, image);
   }
 
   async updateProductImagePosition(
     productId: string,
     imagesPositionsArray: Array<string>
   ): Promise<void> {
-    const product = await this.prismaService.product.findUnique({
-      where: { id: productId },
-    });
-
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    // Update the images array in the product with the new order
-    await this.prismaService.product.update({
-      where: { id: productId },
-      data: {
-        images: imagesPositionsArray,
-      },
-    });
-  }
-
-  async create(data: CreateProductDto): Promise<
-    {
-      workingHours: Omit<Omit<WorkingHours, 'id'>, 'productId'>[];
-    } & Product
-  > {
-    const {
-      description,
-      name,
-      price,
-      supplierId,
-      categories,
-      maxGroupSize,
-      b2bAvailable,
-      b2bMinQuantity,
-      b2bDiscount,
-      bulkAvailability,
-      cancellationPolicy,
-      endingPoint,
-      meetingPoint,
-      minAge,
-      languages,
-      excludedItems,
-      includedItems,
-      duration,
-      itinerary,
-      workingHours,
-    } = data;
-
-    const supplier = await this.prismaService.supplier.findUnique({
-      where: { id: supplierId },
-    });
-
-    if (!supplier) {
-      throw new NotFoundException('Supplier not found');
-    }
-
-    const id = uuidv4();
-
-    const product = await this.prismaService.product.create({
-      data: {
-        id,
-        description,
-        name,
-        price,
-        supplier: {
-          connect: {
-            id: supplierId,
-          },
-        },
-        categories,
-        duration,
-        maxGroupSize: maxGroupSize || 1,
-        cancellationPolicy,
-        endingPoint,
-        meetingPoint,
-        minAge,
-        languages,
-        excludedItems,
-        includedItems,
-        itinerary,
-        b2bAvailable: b2bAvailable || false,
-        b2bMinQuantity,
-        b2bDiscount,
-        bulkAvailability: bulkAvailability || 0,
-        workingHours: {
-          create:
-            workingHours?.map((schedule) => ({
-              dayOfWeek: schedule.dayOfWeek,
-              startTime: schedule.startTime,
-              endTime: schedule.endTime,
-              isAvailable: schedule.isAvailable ?? true,
-            })) || [],
-        },
-      },
-      include: {
-        workingHours: true,
-      },
-    });
-
-    removeProperty(product.workingHours, 'id');
-    removeProperty(product.workingHours, 'productId');
-
-    return product;
-  }
-
-  async addImageToProduct(
-    productId: string,
-    image: Express.Multer.File
-  ): Promise<string> {
-    const product = await this.findProductById(productId);
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    const fileName = await this.fileService.uploadFile(
-      image,
-      process.env.PUBLIC_BUCKET_NAME,
-      `products/${product.id}`
+    return this.productImageService.updateProductImagePosition(
+      productId,
+      imagesPositionsArray
     );
-    const currentImages = product.images || [];
-
-    const endpoint =
-      process.env.MINIO_ENDPOINT === 'localhost'
-        ? `http://${process.env.MINIO_ENDPOINT}:${process.env.MINIO_PORT}`
-        : process.env.MINIO_ENDPOINT;
-
-    const imageUrl = `${endpoint}/${process.env.PUBLIC_BUCKET_NAME}/products/${product.id}/${fileName}`;
-    await this.prismaService.product.update({
-      where: { id: productId },
-      data: {
-        images: [...currentImages, imageUrl],
-      },
-    });
-
-    return imageUrl;
-  }
-
-  async findAll(supplierId: string = undefined): Promise<Array<Product>> {
-    const products = await this.prismaService.product.findMany({
-      where: {
-        supplierId,
-      },
-    });
-
-    return products;
-  }
-
-  async findProductById(id: string): Promise<Product> {
-    const product = await this.prismaService.product.findUnique({
-      where: { id },
-      include: {
-        reviews: true,
-        availability: true,
-        workingHours: true,
-      },
-    });
-
-    return product;
-  }
-
-  async search(
-    productsLimit: number = 20,
-    name?: string,
-    category?: Category,
-    minRating?: number,
-    minPrice?: number,
-    maxPrice?: number,
-    maxGroupSize?: number,
-    b2bOnly?: boolean
-  ): Promise<Array<Product>> {
-    const products = await this.prismaService.product.findMany({
-      where: {
-        ...(name && {
-          name: {
-            contains: name,
-            mode: 'insensitive',
-          },
-        }),
-        ...(category && {
-          categories: {
-            has: category,
-          },
-        }),
-        ...(minRating && {
-          rating: {
-            gte: minRating,
-          },
-        }),
-        ...((minPrice || maxPrice) && {
-          price: {
-            ...(minPrice && { gte: minPrice }),
-            ...(maxPrice && { lte: maxPrice }),
-          },
-        }),
-        ...(maxGroupSize && {
-          maxGroupSize: {
-            gte: maxGroupSize,
-          },
-        }),
-        ...(b2bOnly && { b2bAvailable: true }),
-      },
-      take: productsLimit,
-      include: {
-        workingHours: true,
-        reviews: true,
-        availability: true,
-      },
-    });
-
-    return products;
-  }
-
-  async getHowManyFiles(id: string): Promise<Array<string>> {
-    const files = (
-      await this.prismaService.product.findUnique({
-        where: {
-          id: id,
-        },
-      })
-    ).images;
-
-    return files;
-  }
-
-  async deleteProduct(id: string): Promise<null> {
-    const product = await this.findProductById(id);
-
-    if (!product) {
-      throw new NotFoundException('Product not found');
-    }
-
-    product.images.map(async (image) => {
-      // Get the filename from the URL
-      const fileName = image.split('/').pop();
-
-      // Remove the image from MinIO
-      await this.fileService.deleteFile(
-        process.env.PUBLIC_BUCKET_NAME,
-        `products/${product.id}/${fileName}`
-      );
-    });
-
-    await this.prismaService.product.delete({ where: { id } });
-
-    return;
   }
 
   async deleteAllImagesBySupplierId(supplierId: string): Promise<boolean> {
-    const allProducts = await this.findAll(supplierId);
-    try {
-      allProducts.map(async (product) => {
-        product.images.map(async (image) => {
-          // Get the filename from the URL
-          const fileName = image.split('/').pop();
-
-          // Remove the image from MinIO
-          await this.fileService.deleteFile(
-            process.env.PUBLIC_BUCKET_NAME,
-            `products/${product.id}/${fileName}`
-          );
-        });
-      });
-
-      return true;
-    } catch (e) {
-      return false;
-    }
+    return this.productImageService.deleteAllImagesBySupplierId(supplierId);
   }
 
-  async removeImage(productId: string, image: string): Promise<void> {
-    const product = await this.findProductById(productId);
-    if (!product) {
-      throw new NotFoundException('Product not found');
+  async search(params: SearchProductDto): Promise<Array<Product>> {
+    const {
+      limit = 20,
+      name,
+      category,
+      minRating,
+      minPrice,
+      maxPrice,
+      maxGroupSize,
+      b2bOnly,
+    } = params;
+
+    // Build the where clause based on provided filters
+    const whereClause: any = {};
+
+    if (name) {
+      whereClause.name = {
+        contains: name,
+        mode: 'insensitive',
+      };
     }
 
-    // Get the filename from the URL
-    const fileName = image.split('/').pop();
+    if (category) {
+      whereClause.categories = {
+        has: category,
+      };
+    }
 
-    // Remove the image from MinIO
-    await this.fileService.deleteFile(
-      process.env.PUBLIC_BUCKET_NAME,
-      `products/${product.id}/${fileName}`
-    );
+    if (minRating) {
+      whereClause.rating = {
+        gte: minRating,
+      };
+    }
 
-    // Remove the image URL from the product's images array
-    const updatedImages = product.images.filter((img) => img !== image);
+    if (minPrice || maxPrice) {
+      whereClause.price = {};
+      if (minPrice) whereClause.price.gte = minPrice;
+      if (maxPrice) whereClause.price.lte = maxPrice;
+    }
 
-    // Update the product with the new images array
-    await this.prismaService.product.update({
-      where: { id: productId },
-      data: {
-        images: updatedImages,
+    if (maxGroupSize) {
+      whereClause.maxGroupSize = {
+        gte: maxGroupSize,
+      };
+    }
+
+    if (b2bOnly) {
+      whereClause.b2bAvailable = true;
+    }
+
+    // Execute the query with the constructed where clause
+    return this.model.findMany({
+      where: whereClause,
+      take: limit,
+      include: {
+        workingHours: true,
+        reviews: true,
+        availability: true,
       },
     });
   }
 
-  async checkAvailability(
-    productId: string,
-    startDate: Date,
-    endDate: Date,
-    guestCount: number
-  ): Promise<boolean> {
-    const product = await this.prismaService.product.findUnique({
+  async checkAvailability(params: AvailabilityParamsDto): Promise<boolean> {
+    const { productId, startDate, endDate, guestCount } = params;
+
+    // Fetch product with relevant availability and working hours
+    const product = await this.model.findUnique({
       where: { id: productId },
       include: {
         availability: {
@@ -374,21 +264,33 @@ export class ProductsRepository implements AbstractProductsRepository {
       },
     });
 
-    if (!product) throw new NotFoundException('Product not found');
-    if (guestCount > product.maxGroupSize) return false;
+    // Validate product exists
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
 
-    // Check if all dates in range are available
-    const unavailableDates = product.availability.filter((a) => a.isBooked);
-    if (unavailableDates.length > 0) return false;
+    // Check if guest count exceeds max group size
+    if (guestCount > product.maxGroupSize) {
+      return false;
+    }
 
-    // Check if the requested time falls within working hours
-    const requestedDayOfWeek = startDate.getDay();
+    // Check if any dates in the range are already booked
+    const hasBookedDates = product.availability.some((date) => date.isBooked);
+    if (hasBookedDates) {
+      return false;
+    }
+
+    // Check if the requested day and time are within working hours
+    const dayOfWeek = this.mapToDayOfWeek(startDate.getDay());
     const workingHoursForDay = product.workingHours.find(
-      (wh) => wh.dayOfWeek === this.#mapToDayOfWeek(requestedDayOfWeek)
+      (wh) => wh.dayOfWeek === dayOfWeek && wh.isAvailable
     );
 
-    if (!workingHoursForDay || !workingHoursForDay.isAvailable) return false;
+    if (!workingHoursForDay) {
+      return false;
+    }
 
+    // Check if requested time is within working hours
     const requestedTime = startDate.toTimeString().slice(0, 5);
     return (
       requestedTime >= workingHoursForDay.startTime &&
@@ -396,36 +298,43 @@ export class ProductsRepository implements AbstractProductsRepository {
     );
   }
 
-  async getFilters(): Promise<{
-    categories: Category[];
-    maxPrice: number;
-    minPrice: number;
-    maxGroupSize: number;
-    minRating: number;
-  }> {
-    const products = await this.prismaService.product.findMany({
-      include: {
-        reviews: true,
+  async getFilters(): Promise<ProductFiltersDto> {
+    // Fetch all products with their reviews in a single query
+    const products = await this.model.findMany({
+      select: {
+        categories: true,
+        price: true,
+        maxGroupSize: true,
+        rating: true,
       },
     });
 
-    // Get unique categories from all products
-    const categories = [
-      ...new Set(products.flatMap((product) => product.categories)),
-    ];
+    if (products.length === 0) {
+      return {
+        categories: [],
+        maxPrice: 0,
+        minPrice: 0,
+        maxGroupSize: 0,
+        minRating: 0,
+      };
+    }
 
-    // Get price range
+    // Extract unique categories using Set
+    const allCategories = products.flatMap((product) => product.categories);
+    const categories = [...new Set(allCategories)];
+
+    // Calculate price ranges directly
     const prices = products.map((product) => product.price.toNumber());
     const maxPrice = Math.max(...prices, 0);
     const minPrice = Math.min(...prices, 0);
 
-    // Get max group size
+    // Calculate max group size directly
     const maxGroupSize = Math.max(
       ...products.map((product) => product.maxGroupSize),
       0
     );
 
-    // Get minimum rating
+    // Calculate min rating directly
     const ratings = products.map((product) => product.rating.toNumber());
     const minRating = Math.min(...ratings, 0);
 
@@ -438,7 +347,7 @@ export class ProductsRepository implements AbstractProductsRepository {
     };
   }
 
-  #mapToDayOfWeek(jsDay: number): DayOfWeek {
+  private mapToDayOfWeek(jsDay: number): DayOfWeek {
     const days: DayOfWeek[] = [
       'SUNDAY',
       'MONDAY',
@@ -449,5 +358,18 @@ export class ProductsRepository implements AbstractProductsRepository {
       'SATURDAY',
     ] as DayOfWeek[];
     return days[jsDay];
+  }
+
+  private mapWorkingHoursForCreate(workingHours?: any[]): any[] {
+    if (!workingHours || !Array.isArray(workingHours)) {
+      return [];
+    }
+
+    return workingHours.map((schedule) => ({
+      dayOfWeek: schedule.dayOfWeek,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime,
+      isAvailable: schedule.isAvailable ?? true,
+    }));
   }
 }

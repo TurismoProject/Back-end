@@ -2,7 +2,7 @@ import { LocalStrategy } from '@common/guards/strategies/local.strategy';
 import { DatabaseModule } from '@modules/database.module';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { AuthService } from '@services/auth.service';
+import { JwtGeneratorService } from '@services/jwt-gen.service';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
@@ -32,7 +32,7 @@ import { JwtAuthGuard } from '@common/guards/jwt.guard';
     }),
   ],
   providers: [
-    AuthService,
+    JwtGeneratorService,
     // LocalStrategy,
     JwtStrategy,
     JwtAuthGuard,
@@ -43,6 +43,6 @@ import { JwtAuthGuard } from '@common/guards/jwt.guard';
     },
   ],
   controllers: [],
-  exports: [AuthService, AbstractAuthenticateRepository],
+  exports: [JwtGeneratorService, AbstractAuthenticateRepository],
 })
 export class AuthModule {}

@@ -1,17 +1,21 @@
 import { Injectable } from '@nestjs/common';
-import { AbstractAdminRepository } from './abstract-admin.repository';
-import { CreateAdminDto } from '@dtos/create-admin.dto';
-import { UpdateAdminDto } from '@dtos/update-admin.dto';
-import { Admin } from '@prisma/client';
+import { AbstractBusinessRepository } from './abstract-business.repository';
+import { BaseAuthRepository } from '@commonrepos/base.repository';
 import { PrismaService } from '@database/prisma/prisma.service';
+import { BusinessClient } from '@prisma/client';
+import { CreateBusinessClientDto } from '@dtos/create-business-client.dto';
+import { UpdateBusinessClientDto } from '@dtos/update-business-client.dto';
 import { JwtGeneratorService } from '@services/jwt-gen.service';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
-import { BaseAuthRepository } from '@commonrepos/base.repository';
 
 @Injectable()
-export class AdminRepository
-  extends BaseAuthRepository<Admin, CreateAdminDto, UpdateAdminDto>
-  implements AbstractAdminRepository
+export class BusinessRepository
+  extends BaseAuthRepository<
+    BusinessClient,
+    CreateBusinessClientDto,
+    UpdateBusinessClientDto
+  >
+  implements AbstractBusinessRepository
 {
   constructor(
     protected readonly prismaService: PrismaService,
@@ -22,6 +26,6 @@ export class AdminRepository
   }
 
   protected get model() {
-    return this.prismaService.admin;
+    return this.prismaService.businessClient;
   }
 }

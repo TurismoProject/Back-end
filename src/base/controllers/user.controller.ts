@@ -1,7 +1,5 @@
 import { LocalAuthGuard } from '@common/guards/auth.guard';
 import { RolesGuard } from '@common/guards/roles.guard';
-// import { RolesGuard } from '@common/guards/roles.guard';
-import { AuthModel } from '@common/models/auth.model';
 import { CpfFormatPipe } from '@common/pipes/cpf-format.pipe';
 import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { Roles } from '@decorators/user-roles.decorator';
@@ -28,6 +26,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
 import { User } from '@prisma/client';
 import { AbstractUserRepository } from '@repositories/user/abstract-user.repository';
+import { Response } from 'express';
 
 @Controller('usuario')
 // @UseGuards(RolesGuard)
@@ -44,10 +43,10 @@ export class UserController {
   @Post('cadastro')
   @UsePipes(new PasswordHasherPipe<CreateUserDto>(), CpfFormatPipe)
   async create(@Body() user: CreateUserDto) {
-    const AuthModel = await this.repository.create(user);
+    const userCreated = await this.repository.create(user);
     return {
-      accessToken: AuthModel.accessToken,
-      refreshToken: AuthModel.refreshToken,
+      name: userCreated.name,
+      email: userCreated.email,
     };
   }
 
@@ -60,7 +59,6 @@ export class UserController {
 
   @Post('check-phone')
   async checkPhone(@Body('phone') phoneNumber: string) {
-    console.log(phoneNumber);
     const status = await this.repository.phoneInUse(phoneNumber);
 
     return { inUse: status };
@@ -79,7 +77,7 @@ export class UserController {
 
   @Get('auth/google/create/callback')
   @UseGuards(AuthGuard('google'))
-  async googleCreateRedirect(@Req() req, @Res() res) {
+  async googleCreateRedirect(@Req() req, @Res() res: Response) {
     const result = await this.repository.createWithGoogle(req.user);
     return res.redirect(
       `${this.frontendUrl}/create/callback?token=${result.token}`
@@ -88,7 +86,7 @@ export class UserController {
 
   @Get('auth/google/login/callback')
   @UseGuards(AuthGuard('google'))
-  async googleLoginRedirect(@Req() req, @Res() res) {
+  async googleLoginRedirect(@Req() req, @Res() res: Response) {
     const result = await this.repository.loginWithGoogle(req.user);
     return res.redirect(
       `${this.frontendUrl}/login/callback?token=${result.token}`
@@ -97,10 +95,7 @@ export class UserController {
 
   @Post('login')
   async login(@Body() user: LoginDto) {
-    const logIn: AuthModel = await this.repository.login(
-      user.email,
-      user.password
-    );
+    const logIn = await this.repository.login(user.email, user.password);
 
     return logIn;
   }
@@ -109,7 +104,7 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'))
   async refreshJWT(@Headers('Authorization') refreshTokenWithBearer: string) {
     const refreshToken = refreshTokenWithBearer.split(' ')[1];
-    const logIn: AuthModel = await this.repository.refreshJWT(refreshToken);
+    const logIn = await this.repository.refreshAccessToken(refreshToken);
 
     return logIn;
   }
@@ -128,7 +123,7 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'))
   @UsePipes(new PasswordHasherPipe<User>())
   async update(@Param('id') id: string, @Body() user: UpdateUserDto) {
-    const updatedUserData = await this.repository.updateUser(id, user);
+    const updatedUserData = await this.repository.update(id, user);
     return { message: 'Usuário Atualizado com Sucesso', updatedUserData };
   }
 
@@ -137,8 +132,8 @@ export class UserController {
   @UseGuards(AuthGuard('jwt'))
   async getUser(@Headers('Authorization') authorization: string) {
     const accessToken = authorization.split(' ')[1];
-    const UserData = await this.repository.findByAccessJWT(accessToken);
-    console.log(UserData);
+    const UserData = await this.repository.getByJwt(accessToken);
+
     return {
       user: {
         name: UserData.name,
@@ -152,10 +147,9 @@ export class UserController {
   @Delete('excluir/:id')
   @UsePipes(new PasswordHasherPipe<User>())
   async deleteUser(@Param('id') id: string) {
-    const deleteUser = await this.repository.deleteUser(id);
+    const deleteUser = await this.repository.delete(id);
     return {
       message: `Usuário ${deleteUser.name} foi removido com sucesso.`,
-      deleteUser,
     };
   }
 

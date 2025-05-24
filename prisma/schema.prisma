@@ -20,6 +20,7 @@ enum Role {
   ADMIN
   USER
   SUPPLIER
+  BUSINESS
 }
 
 enum BookingStatus {
@@ -69,33 +70,7 @@ enum PackageType {
   CUSTOM_PACKAGE
 }
 
-model Admin {
-  id       String      @id @default(uuid())
-  email    String      @unique
-  password String
-  name     String
-  role     Role        @default(ADMIN)
-  adminJWT AdminJWTs[]
-}
-
-model BusinessClient {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String
-  companyName   String
-  cnpj          String         @unique
-  phoneNumber   String
-  address       String
-  businessType  BusinessType
-  creditLimit   Decimal        @default(0)
-  isVerified    Boolean        @default(false)
-  contractStart DateTime
-  contractEnd   DateTime?
-  businessJWT   BusinessJWTs[]
-  bulkBookings  BulkBooking[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-}
+// ######## USERS TYPE MODELS ################
 
 model User {
   id              String           @id @default(uuid())
@@ -112,10 +87,28 @@ model User {
   isVerified      Boolean          @default(false)
   lastLoginAt     DateTime?
   preferences     Json?
-  userJWT         UserJWTs[]
   productReviews  ProductReview[]
   supplierReviews SupplierReview[]
   Booking         Booking[]
+}
+
+model BusinessClient {
+  id            String        @id @default(uuid())
+  email         String        @unique
+  password      String
+  companyName   String
+  cnpj          String        @unique
+  phoneNumber   String
+  address       String
+  businessType  BusinessType
+  role          Role          @default(USER)
+  creditLimit   Decimal       @default(0)
+  isVerified    Boolean       @default(false)
+  contractStart DateTime
+  contractEnd   DateTime?
+  bulkBookings  BulkBooking[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Supplier {
@@ -136,30 +129,19 @@ model Supplier {
   socialMedia   Json?
   role          Role             @default(SUPPLIER)
   products      Product[]
-  supplierJWT   SupplierJWTs[]
   reviews       SupplierReview[]
   licenses      String[]
 }
 
-model Banner {
-  id             String     @id @default(uuid())
-  title          String
-  description    String?
-  imageUrl       String
-  linkUrl        String?
-  type           BannerType
-  priority       Int        @default(0) // For ordering banners
-  startDate      DateTime // When to start showing the banner
-  endDate        DateTime? // When to stop showing the banner (null means no end date)
-  isActive       Boolean    @default(true)
-  targetAudience String[] // Can be "B2C", "B2B", or both
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-
-  // Optional relations to related entities
-  relatedProductId String?
-  relatedProduct   Product? @relation(fields: [relatedProductId], references: [id])
+model Admin {
+  id       String @id @default(uuid())
+  email    String @unique
+  password String
+  name     String
+  role     Role   @default(ADMIN)
 }
+
+// ########## PRODUCTS MODELS ###############
 
 model Product {
   id                 String          @id @default(uuid())
@@ -191,6 +173,28 @@ model Product {
   workingHours       WorkingHours[]
   banners            Banner[]
 }
+
+model Banner {
+  id             String     @id @default(uuid())
+  title          String
+  description    String?
+  imageUrl       String
+  linkUrl        String?
+  type           BannerType
+  priority       Int        @default(0) // For ordering banners
+  startDate      DateTime // When to start showing the banner
+  endDate        DateTime? // When to stop showing the banner (null means no end date)
+  isActive       Boolean    @default(true)
+  targetAudience String[] // Can be "B2C", "B2B", or both
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Optional relations to related entities
+  relatedProductId String?
+  relatedProduct   Product? @relation(fields: [relatedProductId], references: [id])
+}
+
+// ########## BOOKING MODELS ##############
 
 model WorkingHours {
   id          String    @id @default(uuid())
@@ -249,6 +253,8 @@ model BulkBooking {
   contractNumber   String?
 }
 
+// ########## REVIEWS MODELS ##############
+
 model ProductReview {
   id          String  @id @default(uuid())
   title       String
@@ -271,42 +277,18 @@ model SupplierReview {
   userId      String
 }
 
-model BusinessJWTs {
-  id               Int            @id @default(autoincrement())
-  token            String         @unique
-  expiresAt        DateTime
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  businessClientId String
-  businessClient   BusinessClient @relation(fields: [businessClientId], references: [id], onDelete: Cascade)
-}
+// ########## AUTH MODELS ##############
 
-model UserJWTs {
+model AuthToken {
   id        Int      @id @default(autoincrement())
   token     String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
 
-model SupplierJWTs {
-  id         Int      @id @default(autoincrement())
-  token      String   @unique
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  supplierId String
-  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
-}
+  // User type and ID
+  userType Role // "ADMIN", "USER", "SUPPLIER", "BUSINESS"
+  userId   String
 
-model AdminJWTs {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  adminId   String
-  admin     Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  @@unique([userType, userId, token])
 }

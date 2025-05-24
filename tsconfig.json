@@ -22,6 +22,8 @@
       "@dtos/*": ["src/common/dtos/*"],
       "@pipes/*": ["src/common/pipes/*"],
       "@interceptors/*": ["src/common/interceptors/*"],
+      "@commonrepos/*": ["src/common/repositories/*"],
+      "@models/*": ["src/common/models/*"],
       "@*": ["src/*"]
     },
     "incremental": true,

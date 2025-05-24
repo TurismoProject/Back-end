@@ -69,15 +69,13 @@ export class ProductsController {
       new FileSizeValidatorPipe({ fileMaxSize: 5e6, imageMaxSize: 1e8 })
     )
     images: Array<Express.Multer.File>,
-    @Body('id', new ParseUUIDPipe()) productId: string,
-    @Body('position', new ParseIntPipe({ optional: true })) position?: number
+    @Body('id', new ParseUUIDPipe()) productId: string
   ) {
     let imagesPositionsArray: Array<string> = [];
     for (let i = 1; i <= images.length; i++) {
       const fileName = await this.repository.addImageToProduct(
         productId,
-        images[i - 1],
-        position ? position + i : i
+        images[i - 1]
       );
       imagesPositionsArray.push(fileName);
     }
@@ -88,7 +86,7 @@ export class ProductsController {
   @Put('atualizar')
   @HttpCode(HttpStatus.OK)
   async updateProduct(@Body() body: UpdateProductDto) {
-    const updatedProduct = await this.repository.updateProduct(body);
+    const updatedProduct = await this.repository.update(body.id, body);
 
     return {
       name: updatedProduct.name,
@@ -112,7 +110,7 @@ export class ProductsController {
   @Delete('excluir')
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@Body('uuid', new ParseUUIDPipe()) uuid: string) {
-    await this.repository.deleteProduct(uuid);
+    await this.repository.delete(uuid);
 
     return {
       message: 'Produto excluído com sucesso!',
@@ -123,21 +121,21 @@ export class ProductsController {
   @HttpCode(HttpStatus.OK)
   async getProducts(
     @Query('categoria', CategoryValidatorPipe) category: Category,
-    @Query('estrelas') rating: number,
+    @Query('estrelas') minRating: number,
     @Query('limite', new ParseIntPipe({ optional: true }))
-    productsLimit: number = 20,
+    limit: number = 20,
     @Query('min') minPrice: number,
     @Query('max') maxPrice: number
   ) {
     const products = (
-      await this.repository.search(
-        productsLimit,
-        undefined,
+      await this.repository.search({
+        limit,
+        name: undefined,
         category,
-        rating,
+        minRating,
         minPrice,
-        maxPrice
-      )
+        maxPrice,
+      })
     ).reduce(
       (
         acc: {
@@ -168,21 +166,21 @@ export class ProductsController {
   async searchProducts(
     @Param('nome') name: string,
     @Query('categoria', CategoryValidatorPipe) category: Category,
-    @Query('estrelas') rating: number,
+    @Query('estrelas') minRating: number,
     @Query('limite', new ParseIntPipe({ optional: true }))
-    productsLimit: number,
+    limit: number,
     @Query('min') minPrice: number,
     @Query('max') maxPrice: number
   ) {
     const products = (
-      await this.repository.search(
-        productsLimit,
+      await this.repository.search({
+        limit,
         name,
         category,
-        rating,
+        minRating,
         minPrice,
-        maxPrice
-      )
+        maxPrice,
+      })
     ).reduce(
       (
         acc: {
@@ -211,7 +209,7 @@ export class ProductsController {
   @Get()
   @HttpCode(HttpStatus.OK)
   async getProduct(@Headers('uuid') uuid: string) {
-    const product = await this.repository.findProductById(uuid);
+    const product = await this.repository.findById(uuid);
     return product;
   }
 }

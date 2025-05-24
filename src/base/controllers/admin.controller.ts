@@ -44,7 +44,7 @@ export class AdminController {
   @UseGuards(AuthGuard('jwt'))
   @UsePipes(new PasswordHasherPipe<CreateAdminDto>())
   async updateAdmin(@Param('id') id: string, @Body() user: UpdateAdminDto) {
-    const updatedAdminData = await this.repository.updateAdmin(id, user);
+    const updatedAdminData = await this.repository.update(id, user);
     return { message: 'Usuário Atualizado com Sucesso', updatedAdminData };
   }
   @UseGuards(AuthGuard('jwt'))

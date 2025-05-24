@@ -1,4 +1,4 @@
-export function removeProperty<T, K extends keyof T>(
+export function removePropertyForEach<T, K extends keyof T>(
   arr: T[],
   property: K
 ): void {
