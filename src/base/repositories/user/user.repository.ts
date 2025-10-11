@@ -20,6 +20,7 @@ import { GoogleAuthentication } from '@common/models/user-google-authenticate.mo
 import { EmailService } from '@services/email.service';
 import { AuthResetPassModel } from '@common/models/auth-resetpass.model';
 import { ResetPassword } from '@common/models/reset-password.model';
+import { LoginGoogleDto } from '@dtos/login-google.dto';
 
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
@@ -28,7 +29,7 @@ export class UserRepository implements AbstractUserRepository {
     private readonly authService: AuthService,
     private readonly emailService: EmailService,
     private readonly authRepository: AbstractAuthenticateRepository
-  ) { }
+  ) {}
   async sendUserPasswordResetLink(email: string): Promise<ResetPassword> {
     const user = await this.findByEmail(email);
     const token = this.authService.generateResetToken(user);
@@ -58,56 +59,64 @@ export class UserRepository implements AbstractUserRepository {
       };
 
       return response;
-
     } catch (error) {
-      throw new InternalServerErrorException(`erro ao enviar email para o destinatário ${user.email}: ${error}`);
+      throw new InternalServerErrorException(
+        `erro ao enviar email para o destinatário ${user.email}: ${error}`
+      );
     }
   }
 
-  async createWithGoogle(user: CreateUserWithGoogleDto): Promise<GoogleAuthentication> {
+  async createWithGoogle(
+    user: CreateUserWithGoogleDto
+  ): Promise<GoogleAuthentication> {
     try {
-      const createdUserWithGoogle = await this.prismaService.user.create({
-        data: {
-          email: user.email,
-          name: user.name,
-          googleId: user.googleId,
-          password: '',
-          cpf: '',
-          birthday: '',
-          phoneNumber: '',
-          address: '',
+      const existingUser = await this.prismaService.user.findFirst({
+        where: {
+          OR: [{ googleId: user.googleId }, { email: user.email }],
         },
-      })
-      const token = this.authService.generateTokens(createdUserWithGoogle);
+      });
+
+      const targetUser =
+        existingUser ??
+        (await this.prismaService.user.create({
+          data: {
+            email: user.email,
+            name: user.name,
+            googleId: user.googleId,
+            password: '',
+            cpf: '',
+            birthday: '',
+            phoneNumber: '',
+            address: '',
+          },
+        }));
+      const token = this.authService.generateTokens(targetUser);
 
       const authData: AuthModel = {
         accessToken: token.accessToken,
         refreshToken: token.refreshToken,
-        authId: createdUserWithGoogle.id,
+        authId: targetUser.id,
         expirationDateRefreshToken: token.expirationDateRefreshToken,
       };
 
       await this.authRepository.authenticateUser(authData);
 
       return {
-        user: createdUserWithGoogle,
+        user: targetUser,
         token: token.accessToken,
       };
-
     } catch (error) {
-      throw new ConflictException(`Erro ao criar o usuário com google: ${error.message}`);
+      throw new ConflictException(
+        `Erro ao criar ou autenticar usuário com Google: ${error.message}`
+      );
     }
   }
 
-  async loginWithGoogle(user: CreateUserWithGoogleDto): Promise<GoogleAuthentication> {
+  async loginWithGoogle(user: LoginGoogleDto): Promise<GoogleAuthentication> {
     try {
-
-      const existingUser = await this.prismaService.user.findUnique({
+      const existingUser = await this.prismaService.user.findFirst({
         where: {
-          email: user.email,
-          AND: {
-            googleId: user.googleId
-          }
+          AND: [{ email: user.email }, { googleId: user.googleId }],
         },
       });
 
@@ -122,7 +131,9 @@ export class UserRepository implements AbstractUserRepository {
         token,
       };
     } catch (error) {
-      throw new UnauthorizedException(`Erro ao fazer login com Google: ${error.message}`);
+      throw new UnauthorizedException(
+        `Erro ao fazer login com Google: ${error.message}`
+      );
     }
   }
 
