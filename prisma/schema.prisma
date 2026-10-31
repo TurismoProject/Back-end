@@ -31,13 +31,13 @@ model Admin {
 model User {
   id          String     @id @default(uuid())
   email       String     @unique
-  password    String
+  password    String?
   name        String
-  cpf         String     @unique
+  cpf         String?    @unique
   googleId    String?    @unique 
-  birthday    String
-  phoneNumber String     @unique
-  address     String
+  birthday    String?
+  phoneNumber String?    @unique
+  address     String?
   role        Role       @default(User)
   userJWT     UserJWTs[]
 }
