@@ -1,3 +1,4 @@
+import { ReservationsModule } from '../../reservations/reservations.module';
 import { Module } from '@nestjs/common';
 import { UserModule } from '@modules/user.module';
 import { ProductsModule } from '@modules/products.module';
@@ -14,6 +15,7 @@ import { EmailModule } from './email.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ReservationsModule,
     AdminModule,
     UserModule,
     ProductsModule,
@@ -23,5 +25,4 @@ import { EmailModule } from './email.module';
   controllers: [],
   providers: [],
 })
-export class AppModule { }
-
+export class AppModule {}

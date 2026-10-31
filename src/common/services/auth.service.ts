@@ -1,67 +1,88 @@
 import { JwtService } from '@nestjs/jwt';
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
-import { Admin, Supplier, User } from '@prisma/client';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Role, User } from '@prisma/client';
 import { AuthModel } from '@common/models/auth.model';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomUUID } from 'crypto';
+
+type TokenIdentity = Pick<User, 'id' | 'email' | 'role'>;
+interface TokenClaims {
+  sub: string;
+  email: string;
+  role: Role;
+  tokenUse: 'access' | 'refresh';
+}
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly jwtService: JwtService) { }
+  constructor(private readonly jwtService: JwtService) {}
 
-  public generateTokens(user: User | Admin | Supplier): AuthModel {
-    const accessTokenObj = this.generateJwtToken(user, '15d');
-    const refreshTokenObj = this.generateJwtToken(user, '7d');
-
-    const tokens: AuthModel = {
-      accessToken: accessTokenObj.token,
-      refreshToken: refreshTokenObj.token,
-      expirationDateRefreshToken: refreshTokenObj.exp,
+  public generateTokens(user: TokenIdentity): AuthModel {
+    const access = this.generateJwtToken(user, 'access', 15 * 60);
+    const refresh = this.generateJwtToken(user, 'refresh', 7 * 24 * 60 * 60);
+    return {
+      accessToken: access.token,
+      refreshToken: refresh.token,
+      expirationDateRefreshToken: refresh.exp,
     };
-
-    return tokens;
   }
 
   public regenerateAccessToken(refreshToken: string) {
-    const decoded = this.jwtService.verify(refreshToken);
-    return this.generateJwtToken(decoded, '15m');
+    const payload = this.validateRefreshToken(refreshToken);
+    return this.generateJwtToken(
+      { id: payload.sub, email: payload.email, role: payload.role },
+      'access',
+      15 * 60
+    );
   }
 
-  public validateAccessToken(token: string): any {
+  public validateRefreshToken(token: string): TokenClaims {
+    return this.verifyToken(token, 'refresh');
+  }
+
+  public validateAccessToken(token: string): TokenClaims {
+    return this.verifyToken(token, 'access');
+  }
+
+  private verifyToken(
+    token: string,
+    tokenUse: TokenClaims['tokenUse']
+  ): TokenClaims {
     try {
-      const payload = this.jwtService.verify(token);
+      const payload = this.jwtService.verify<TokenClaims>(token, {
+        algorithms: ['RS256'],
+      });
+      if (
+        payload.tokenUse !== tokenUse ||
+        !payload.sub ||
+        !Object.values(Role).includes(payload.role)
+      )
+        throw new Error();
       return payload;
-    } catch (error) {
-      return new InternalServerErrorException(error);
+    } catch {
+      throw new UnauthorizedException('Token inválido ou expirado.');
     }
   }
 
-  public generateResetToken(user: User | Admin | Supplier) {
-    const token = randomBytes(32).toString('hex');
-    const expiration = new Date(Date.now() + 30 * 60 * 1000);
-
+  public generateResetToken(_user: TokenIdentity) {
     return {
-      token,
-      exp: expiration,
+      token: randomBytes(32).toString('hex'),
+      exp: new Date(Date.now() + 30 * 60 * 1000),
     };
   }
 
   private generateJwtToken(
-    user: User | Admin | Supplier,
-    expiration: string = '15d'
+    user: TokenIdentity,
+    tokenUse: TokenClaims['tokenUse'],
+    expiresIn: number
   ) {
-    const payload = {
-      sub: user.id,
-      email: user.email,
-      role: user.role,
-    };
-
-    const token = this.jwtService.sign({ ...payload, exp: Math.floor(Date.now() / 1000) + (15 * 24 * 60 * 60) });
-    const tokenObject = this.jwtService.decode(token);
-    const { exp } = tokenObject;
-    return {
-      token,
-      exp,
-    };
-
+    const token = this.jwtService.sign(
+      { sub: user.id, email: user.email, role: user.role, tokenUse },
+      {
+        expiresIn,
+        jwtid: randomUUID(),
+      }
+    );
+    const { exp } = this.jwtService.decode(token) as { exp: number };
+    return { token, exp };
   }
 }

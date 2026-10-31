@@ -1,3 +1,5 @@
+import { UpdatePasswordDto } from '@dtos/update-new-password.dto';
+import { ResponseResetPassModel } from '@common/models/response-resetpass.model';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '@database/prisma/prisma.service';
 import { AuthService } from '@services/auth.service';
@@ -64,6 +66,39 @@ export class UserRepository implements AbstractUserRepository {
         `erro ao enviar email para o destinatário ${user.email}: ${error}`
       );
     }
+  }
+
+  async resetPassword(dto: UpdatePasswordDto): Promise<ResponseResetPassModel> {
+    const password = await bcrypt.hash(dto.newPassword, 10);
+    return this.prismaService.$transaction(async (tx) => {
+      const token = await tx.userJWTs.findUnique({
+        where: { token: dto.token },
+      });
+      if (
+        !token ||
+        token.type !== JwtTokenType.reset ||
+        token.expiresAt <= new Date()
+      ) {
+        throw new BadRequestException(
+          'Link de recuperação inválido ou expirado.'
+        );
+      }
+      const consumed = await tx.userJWTs.deleteMany({
+        where: {
+          id: token.id,
+          type: JwtTokenType.reset,
+          expiresAt: { gt: new Date() },
+        },
+      });
+      if (consumed.count !== 1)
+        throw new BadRequestException('Link de recuperação já utilizado.');
+      const user = await tx.user.update({
+        where: { id: token.userId },
+        data: { password },
+      });
+      await tx.userJWTs.deleteMany({ where: { userId: user.id } });
+      return { message: 'Senha atualizada com sucesso.' };
+    });
   }
 
   async createWithGoogle(
@@ -192,6 +227,18 @@ export class UserRepository implements AbstractUserRepository {
   }
 
   async refreshJWT(jwt: string): Promise<AuthModel> {
+    const payload = this.authService.validateRefreshToken(jwt);
+    const stored = await this.authRepository.searchUserJWT(jwt);
+    const user = await this.findById(payload.sub);
+    if (
+      !stored ||
+      stored.expiresAt <= new Date() ||
+      stored.userId !== payload.sub ||
+      !user ||
+      user.role !== payload.role
+    ) {
+      throw new UnauthorizedException('Sessão expirada ou revogada.');
+    }
     const newTokenObj = this.authService.regenerateAccessToken(jwt);
 
     const authData: AuthModel = {

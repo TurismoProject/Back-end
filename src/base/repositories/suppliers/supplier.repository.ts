@@ -1,22 +1,24 @@
 import { PrismaService } from '@database/prisma/prisma.service';
 import {
   BadRequestException,
+  ConflictException,
+  Logger,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { AbstractSupplierRepository } from './abstract-supplier.repository';
-import { Supplier } from '@prisma/client';
+import { Prisma, Supplier } from '@prisma/client';
 import { CreateSupplierDto } from '@dtos/create-supplier.dto';
 import { UpdateSupplierDto } from '@dtos/update-supplier.dto';
-import { AbstractProductsRepository } from '@repositories/products/abstract-products.repository';
+import { FileService } from '@services/file.service';
 
 @Injectable()
 export class SupplierRepository implements AbstractSupplierRepository {
+  private readonly logger = new Logger(SupplierRepository.name);
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly productRepository: AbstractProductsRepository
-  ) { }
+    private readonly fileService: FileService
+  ) {}
 
   async create(data: CreateSupplierDto): Promise<Supplier> {
     const supplierExists = await this.getByEmail(data.email);
@@ -64,15 +66,38 @@ export class SupplierRepository implements AbstractSupplierRepository {
   }
 
   async delete(uuid: string): Promise<null> {
-    const result =
-      await this.productRepository.deleteAllImagesBySupplierId(uuid);
-
-    if (!result)
-      throw new InternalServerErrorException(
-        "Error deleting supplier's images"
+    let urls: string[];
+    try {
+      urls = await this.prismaService.$transaction(async (tx) => {
+        const supplier = await tx.supplier.findUnique({
+          where: { id: uuid },
+          include: { products: { select: { imagesUrl: true } } },
+        });
+        if (!supplier)
+          throw new NotFoundException('Fornecedor não encontrado.');
+        // Delete first: historical departures must block removal before touching storage.
+        await tx.supplier.delete({ where: { id: uuid } });
+        return supplier.products.flatMap((product) => product.imagesUrl);
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          'O fornecedor possui saídas cadastradas e seu histórico deve ser preservado.'
+        );
+      }
+      throw error;
+    }
+    const results = await Promise.allSettled(
+      urls.map((url) => this.fileService.deleteFile(url))
+    );
+    if (results.some((result) => result.status === 'rejected')) {
+      this.logger.warn(
+        `Falha ao remover imagens do fornecedor excluído ${uuid}.`
       );
-
-    await this.prismaService.supplier.delete({ where: { id: uuid } });
-    return;
+    }
+    return null;
   }
 }

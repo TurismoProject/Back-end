@@ -1,3 +1,4 @@
+import { ReservationAccessGuard } from '../../reservations/auth/reservation-access.guard';
 import { UserController } from '@controllers/user.controller';
 import { DatabaseModule } from '@modules/database.module';
 import { Module } from '@nestjs/common';
@@ -9,7 +10,10 @@ import { EmailModule } from './email.module';
 @Module({
   imports: [DatabaseModule, AuthModule, EmailModule],
   controllers: [UserController],
-  providers: [{ provide: AbstractUserRepository, useClass: UserRepository }],
+  providers: [
+    ReservationAccessGuard,
+    { provide: AbstractUserRepository, useClass: UserRepository },
+  ],
   exports: [],
 })
-export class UserModule { }
+export class UserModule {}

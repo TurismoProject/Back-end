@@ -1,13 +1,21 @@
-import { LocalAuthGuard } from '@common/guards/auth.guard';
+import { NotFoundException } from '@nestjs/common';
+import { Role } from '@prisma/client';
+import {
+  CurrentReservationActor,
+  ReservationActor,
+} from '../../reservations/auth/reservation-actor';
+import {
+  ReservationAccessGuard,
+  ReservationRole,
+} from '../../reservations/auth/reservation-access.guard';
+import { RefreshTokenDto } from '@dtos/refresh-token.dto';
 import { RolesGuard } from '@common/guards/roles.guard';
 // import { RolesGuard } from '@common/guards/roles.guard';
 import { AuthModel } from '@common/models/auth.model';
 import { CpfFormatPipe } from '@common/pipes/cpf-format.pipe';
 import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { Roles } from '@decorators/user-roles.decorator';
-import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
 import { CreateUserDto } from '@dtos/create-user.dto';
-import { LoginGoogleDto } from '@dtos/login-google.dto';
 import { LoginDto } from '@dtos/login.dto';
 import { UpdatePasswordDto } from '@dtos/update-new-password.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
@@ -48,7 +56,8 @@ export class UserController {
   @UsePipes(new PasswordHasherPipe<CreateUserDto>(), CpfFormatPipe)
   async create(@Body() user: CreateUserDto) {
     const newUser = await this.repository.create(user);
-    return newUser;
+    const { password: _password, ...profile } = newUser;
+    return profile;
   }
 
   @Get('auth/google')
@@ -73,16 +82,6 @@ export class UserController {
     );
   }
 
-  @Post('auth/google/test')
-  async testGoogleAuth(@Body() body: CreateUserWithGoogleDto) {
-    return this.repository.createWithGoogle(body);
-  }
-
-  @Post('auth/google/login/test')
-  async testGoogleLogin(@Body() body: LoginGoogleDto) {
-    return this.repository.loginWithGoogle(body);
-  }
-
   @Get('auth/google/login/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginRedirect(@Req() req, @Res() res) {
@@ -103,8 +102,7 @@ export class UserController {
   }
 
   @Post('relogar')
-  @UseGuards(AuthGuard('jwt'))
-  async refreshJWT(@Body() body: { refreshToken: string }) {
+  async refreshJWT(@Body() body: RefreshTokenDto) {
     const logIn: AuthModel = await this.repository.refreshJWT(
       body.refreshToken
     );
@@ -120,21 +118,29 @@ export class UserController {
     return response;
   }
 
-  @UsePipes(new PasswordHasherPipe<CreateUserDto>())
   @Put('reset-password')
   async resetPasswordUser(@Body() data: UpdatePasswordDto) {
-    const response = await this.resetPasswordUser(data);
+    const response = await this.repository.resetPassword(data);
     return response;
   }
 
   // @UseGuards(LocalAuthGuard)
   @Put('atualizar/:id')
-  @Roles('admin')
-  @UseGuards(AuthGuard('jwt'))
+  @ReservationRole(Role.User)
+  @UseGuards(ReservationAccessGuard)
   @UsePipes(new PasswordHasherPipe<User>())
-  async update(@Param('id') id: string, @Body() user: UpdateUserDto) {
+  async update(
+    @CurrentReservationActor() actor: ReservationActor,
+    @Param('id') id: string,
+    @Body() user: UpdateUserDto
+  ) {
+    if (id !== actor.id) throw new NotFoundException('Usuário não encontrado.');
     const updatedUserData = await this.repository.updateUser(id, user);
-    return { message: 'Usuário Atualizado com Sucesso', updatedUserData };
+    const { password: _password, ...profile } = updatedUserData;
+    return {
+      message: 'Usuário Atualizado com Sucesso',
+      updatedUserData: profile,
+    };
   }
 
   @Get('informacoes')
@@ -166,9 +172,9 @@ export class UserController {
 
   @Roles('Admin')
   @Get('buscar/todos')
-  // @UseGuards(AuthGuard('jwt'), RolesGuard)
-  async findAll(@Req() req) {
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  async findAll() {
     const users: User[] = await this.repository.findAll();
-    return users;
+    return users.map(({ password: _password, ...profile }) => profile);
   }
 }

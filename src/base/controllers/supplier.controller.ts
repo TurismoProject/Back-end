@@ -1,40 +1,52 @@
+import { UseGuards } from '@nestjs/common';
+import { Role } from '@prisma/client';
+import { LoginDto } from '@dtos/login.dto';
+import { RefreshTokenDto } from '@dtos/refresh-token.dto';
+import {
+  CurrentReservationActor,
+  ReservationActor,
+} from '../../reservations/auth/reservation-actor';
+import {
+  ReservationAccessGuard,
+  ReservationRole,
+} from '../../reservations/auth/reservation-access.guard';
+import { SupplierAuthenticationService } from '../../reservations/auth/supplier-authentication.service';
 import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { CreateSupplierDto } from '@dtos/create-supplier.dto';
 import { UpdateSupplierDto } from '@dtos/update-supplier.dto';
 import {
   Body,
-  ConflictException,
   Controller,
   Delete,
   Get,
-  Headers,
   HttpCode,
   HttpStatus,
   NotFoundException,
-  ParseUUIDPipe,
   Patch,
   Post,
 } from '@nestjs/common';
 import { AbstractSupplierRepository } from '@repositories/suppliers/abstract-supplier.repository';
-import { isUUID } from 'class-validator';
-import * as bcrypt from 'bcrypt';
 
 @Controller('provedor')
 export class SupplierController {
-  constructor(private readonly repository: AbstractSupplierRepository) { }
+  constructor(
+    private readonly repository: AbstractSupplierRepository,
+    private readonly authentication: SupplierAuthenticationService
+  ) {}
 
   @Get()
-  @HttpCode(HttpStatus.OK)
-  async getSupplier(@Headers('uuid') uuid: string) {
-    if (!uuid) {
-      const suppliers = await this.repository.getAll();
-      return suppliers;
-    }
-
-    if (!isUUID(uuid)) throw new ConflictException('Invalid UUID');
-
-    const supplier = await this.repository.getByUUID(uuid);
-    return supplier;
+  @UseGuards(ReservationAccessGuard)
+  @ReservationRole(Role.Supplier)
+  async getSupplier(@CurrentReservationActor() actor: ReservationActor) {
+    const supplier = await this.repository.getByUUID(actor.id);
+    return {
+      id: supplier.id,
+      name: supplier.name,
+      email: supplier.email,
+      cnpj: supplier.cnpj,
+      phoneNumber: supplier.phoneNumber,
+      address: supplier.address,
+    };
   }
 
   @Post('cadastro')
@@ -42,7 +54,6 @@ export class SupplierController {
   async createSupplier(
     @Body(new PasswordHasherPipe()) body: CreateSupplierDto
   ) {
-    console.log(body.password);
     const supplier = await this.repository.create(body);
 
     return {
@@ -53,36 +64,39 @@ export class SupplierController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  async loginSupplier(@Body() body: { email: string; password: string }) {
-    const supplier = await this.repository.getByEmail(body.email);
+  loginSupplier(@Body() body: LoginDto) {
+    return this.authentication.login(body.email, body.password);
+  }
 
-    if (!supplier) throw new NotFoundException('Supplier not found');
-
-    if (!(await bcrypt.compare(body.password, supplier.password)))
-      throw new ConflictException('Invalid password');
-
-    return {
-      companyName: supplier.name,
-      email: supplier.email,
-      password: supplier.password,
-    };
+  @Post('relogar')
+  @HttpCode(HttpStatus.OK)
+  refreshSupplier(@Body() body: RefreshTokenDto) {
+    return this.authentication.refresh(body.refreshToken);
   }
 
   @Patch('atualizar')
+  @UseGuards(ReservationAccessGuard)
+  @ReservationRole(Role.Supplier)
   @HttpCode(HttpStatus.OK)
-  async updateSupplier(@Body() body: UpdateSupplierDto) {
-    const supplier = await this.repository.update(body);
+  async updateSupplier(
+    @CurrentReservationActor() actor: ReservationActor,
+    @Body(new PasswordHasherPipe()) body: UpdateSupplierDto
+  ) {
+    if (body.id && body.id !== actor.id)
+      throw new NotFoundException('Fornecedor não encontrado.');
+    const supplier = await this.repository.update({ ...body, id: actor.id });
 
     return {
       companyName: supplier.name,
       email: supplier.email,
-      password: supplier.password,
     };
   }
 
   @Delete('excluir')
+  @UseGuards(ReservationAccessGuard)
+  @ReservationRole(Role.Supplier)
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteSupplier(@Body('uuid', new ParseUUIDPipe()) uuid: string) {
-    return await this.repository.delete(uuid);
+  async deleteSupplier(@CurrentReservationActor() actor: ReservationActor) {
+    return await this.repository.delete(actor.id);
   }
 }

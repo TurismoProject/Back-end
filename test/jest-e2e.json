@@ -1,9 +1,22 @@
 {
   "moduleFileExtensions": ["js", "json", "ts"],
-  "rootDir": ".",
+  "rootDir": "..",
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
+  "testRegex": "test/.*\\.e2e-spec\\.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "moduleNameMapper": {
+    "^@modules/(.*)$": "<rootDir>/src/base/modules/$1",
+    "^@controllers/(.*)$": "<rootDir>/src/base/controllers/$1",
+    "^@repositories/(.*)$": "<rootDir>/src/base/repositories/$1",
+    "^@database/(.*)$": "<rootDir>/src/base/database/$1",
+    "^@services/(.*)$": "<rootDir>/src/common/services/$1",
+    "^@middlewares/(.*)$": "<rootDir>/src/common/middlewares/$1",
+    "^@validators/(.*)$": "<rootDir>/src/common/validators/$1",
+    "^@decorators/(.*)$": "<rootDir>/src/common/decorators/$1",
+    "^@dtos/(.*)$": "<rootDir>/src/common/dtos/$1",
+    "^@(common|base|config)/(.*)$": "<rootDir>/src/$1/$2"
+  },
+  "testTimeout": 30000
 }

@@ -2,7 +2,6 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PassportStrategy } from '@nestjs/passport';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import validator from 'validator';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -19,9 +18,14 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   }
 
   async validate(payload: any) {
+    if (
+      payload.tokenUse !== 'access' ||
+      !payload.sub ||
+      typeof payload.role !== 'string'
+    ) {
+      throw new UnauthorizedException('Token de acesso inválido.');
+    }
     const normalizedRole = payload.role.toUpperCase();
-    console.log(payload);
-    console.log(normalizedRole);
 
     return {
       userId: payload.sub,

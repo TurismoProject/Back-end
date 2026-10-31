@@ -1,3 +1,13 @@
+import { UseGuards, NotFoundException } from '@nestjs/common';
+import { Role } from '@prisma/client';
+import {
+  CurrentReservationActor,
+  ReservationActor,
+} from '../../reservations/auth/reservation-actor';
+import {
+  ReservationAccessGuard,
+  ReservationRole,
+} from '../../reservations/auth/reservation-access.guard';
 import { FilesToURLPipe } from '@common/pipes/files-to-url.pipe';
 import { BucketService } from '@database/bucket/bucket.service';
 import { CreateProductDto } from '@dtos/create-product.dto';
@@ -24,9 +34,12 @@ export class ProductsController {
   ) {}
 
   @Post('criar')
+  @UseGuards(ReservationAccessGuard)
+  @ReservationRole(Role.Supplier)
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(FilesInterceptor('images', 5))
   async create(
+    @CurrentReservationActor() actor: ReservationActor,
     @UploadedFiles(
       new ParseFilePipe({
         validators: [
@@ -39,9 +52,15 @@ export class ProductsController {
     images: Array<string>,
     @Body() body: CreateProductDto
   ) {
-    const createdProduct = await this.repository.create(body, images);
+    if (body.supplierId !== actor.id)
+      throw new NotFoundException('Fornecedor não encontrado.');
+    const createdProduct = await this.repository.create(
+      { ...body, supplierId: actor.id },
+      images
+    );
 
     return {
+      id: createdProduct.id,
       name: createdProduct.name,
       description: createdProduct.description,
       price: createdProduct.price,

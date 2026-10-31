@@ -1,13 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { AbstractProductsRepository } from './abstract-products.repository';
 import { PrismaService } from '@database/prisma/prisma.service';
-import { Product } from '@prisma/client';
+import { Prisma, Product } from '@prisma/client';
 import { CreateProductDto } from '@dtos/create-product.dto';
 import { UpdateProductDto } from '@dtos/update-product.dto';
 import { FileService } from '@services/file.service';
 
 @Injectable()
 export class ProductsRepository implements AbstractProductsRepository {
+  private readonly logger = new Logger(ProductsRepository.name);
   constructor(
     private readonly prismaService: PrismaService,
     private readonly fileService: FileService
@@ -75,32 +81,37 @@ export class ProductsRepository implements AbstractProductsRepository {
   }
 
   async delete(id: string): Promise<null> {
-    const product = await this.findProductById(id);
-
+    let product: Product;
     try {
-      product.imagesUrl.reduce((acc, url) => {
-        this.fileService.deleteFile(url);
-        return acc;
-      }, []);
-    } catch (e) {
-      throw new NotFoundException('Product does not exists on database');
+      product = await this.prismaService.product.delete({ where: { id } });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2003')
+          throw new ConflictException(
+            'O passeio possui saídas cadastradas e seu histórico deve ser preservado.'
+          );
+        if (error.code === 'P2025')
+          throw new NotFoundException('Passeio não encontrado.');
+      }
+      throw error;
     }
-
-    await this.prismaService.product.delete({ where: { id } });
-
-    return;
+    const results = await Promise.allSettled(
+      product.imagesUrl.map((url) => this.fileService.deleteFile(url))
+    );
+    if (results.some((result) => result.status === 'rejected')) {
+      this.logger.warn(`Falha ao remover imagens do passeio excluído ${id}.`);
+    }
+    return null;
   }
 
   async deleteAllImagesBySupplierId(supplierId: string): Promise<boolean> {
     const allProducts = await this.findAll(supplierId);
     try {
-      allProducts.map((product) => {
-        product.imagesUrl.reduce((acc, url) => {
-          this.fileService.deleteFile(url);
-          return acc;
-        }, []);
-      });
-
+      await Promise.all(
+        allProducts.flatMap((product) =>
+          product.imagesUrl.map((url) => this.fileService.deleteFile(url))
+        )
+      );
       return true;
     } catch (e) {
       return false;

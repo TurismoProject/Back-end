@@ -20,7 +20,8 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:e2e": "jest --config ./test/jest-e2e.json",
+    "test:reservations:e2e": "jest --config ./test/jest-e2e.json --runInBand"
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.808.0",
@@ -97,6 +98,18 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^@modules/(.*)$": "<rootDir>/base/modules/$1",
+      "^@controllers/(.*)$": "<rootDir>/base/controllers/$1",
+      "^@repositories/(.*)$": "<rootDir>/base/repositories/$1",
+      "^@database/(.*)$": "<rootDir>/base/database/$1",
+      "^@services/(.*)$": "<rootDir>/common/services/$1",
+      "^@middlewares/(.*)$": "<rootDir>/common/middlewares/$1",
+      "^@validators/(.*)$": "<rootDir>/common/validators/$1",
+      "^@decorators/(.*)$": "<rootDir>/common/decorators/$1",
+      "^@dtos/(.*)$": "<rootDir>/common/dtos/$1",
+      "^@(common|base|config)/(.*)$": "<rootDir>/$1/$2"
+    }
   }
 }
