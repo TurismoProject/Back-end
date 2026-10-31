@@ -17,6 +17,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
+  /**
+   * Aceita somente access tokens nas rotas legadas protegidas por AuthGuard('jwt').
+   *
+   * @remarks
+   * Passport já verificou assinatura e expiração antes deste método. O retorno mantém
+   * o papel em maiúsculas por compatibilidade com o legado. O módulo de reservas usa
+   * ReservationAccessGuard, que também consulta a conta e preserva o papel do Prisma.
+   * @throws {UnauthorizedException} Se a finalidade ou os campos básicos forem inválidos.
+   */
   async validate(payload: any) {
     if (
       payload.tokenUse !== 'access' ||

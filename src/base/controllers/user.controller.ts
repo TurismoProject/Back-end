@@ -101,6 +101,9 @@ export class UserController {
     return logIn;
   }
 
+  /**
+   * Renova acesso usando o refresh token e a sessão persistida, sem exigir acesso ainda válido.
+   */
   @Post('relogar')
   async refreshJWT(@Body() body: RefreshTokenDto) {
     const logIn: AuthModel = await this.repository.refreshJWT(
@@ -118,6 +121,10 @@ export class UserController {
     return response;
   }
 
+  /**
+   * Encaminha a nova senha e o segredo de recuperação para consumo único no repository.
+   * O hash e a invalidação das sessões persistidas pertencem ao fluxo transacional.
+   */
   @Put('reset-password')
   async resetPasswordUser(@Body() data: UpdatePasswordDto) {
     const response = await this.repository.resetPassword(data);
@@ -125,6 +132,9 @@ export class UserController {
   }
 
   // @UseGuards(LocalAuthGuard)
+  /**
+   * Restringe a atualização ao próprio usuário autenticado, protegendo sua identidade nas reservas.
+   */
   @Put('atualizar/:id')
   @ReservationRole(Role.User)
   @UseGuards(ReservationAccessGuard)

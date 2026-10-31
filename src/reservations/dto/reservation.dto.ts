@@ -25,6 +25,10 @@ import {
   ReservationStatus,
 } from '@prisma/client';
 
+/**
+ * Paginação compartilhada: página a partir de 1 e limite de até 100 registros.
+ * Converte explicitamente números recebidos na query string antes de validá-los.
+ */
 export class PaginationDto {
   @ApiPropertyOptional({ default: 1 })
   @IsOptional()
@@ -43,6 +47,10 @@ export class PaginationDto {
   limit = 20;
 }
 
+/**
+ * Contrato de criação de saída; propriedade, data futura e preço positivo são validados no service.
+ * Instantes exigem offset e preços são strings para evitar perda de precisão monetária.
+ */
 export class CreateDepartureDto {
   @ApiProperty()
   @IsUUID()
@@ -76,6 +84,10 @@ export class CreateDepartureDto {
   pricePerPerson: string;
 }
 
+/**
+ * Filtros do catálogo público e da listagem privada do fornecedor.
+ * O intervalo usa início inclusivo e fim exclusivo, permitindo delimitar um dia local.
+ */
 export class DepartureQueryDto extends PaginationDto {
   @ApiPropertyOptional({
     example: '2027-01-15T00:00:00-03:00',
@@ -106,6 +118,10 @@ export class DepartureQueryDto extends PaginationDto {
   status?: DepartureStatus;
 }
 
+/**
+ * Nome de um passageiro previsto, normalizado antes da persistência.
+ * O responsável só será passageiro se também constar nessa lista; homônimos são permitidos.
+ */
 export class ParticipantDto {
   @ApiProperty({ example: 'Ana Souza' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
@@ -115,11 +131,18 @@ export class ParticipantDto {
   name: string;
 }
 
+/**
+ * Pedido de reserva sem preço, status ou responsável controláveis pelo cliente.
+ * A quantidade de passageiros é derivada da lista, limitada a 100 participantes.
+ */
 export class CreateReservationDto {
   @ApiProperty()
   @IsUUID()
   departureId: string;
 
+  /**
+   * Identifica o mesmo pedido em reenvios; a unicidade é por usuário, não por saída.
+   */
   @ApiProperty({
     description:
       'UUID gerado pelo cliente e reutilizado ao repetir o mesmo pedido.',
@@ -136,6 +159,10 @@ export class CreateReservationDto {
   participants: ParticipantDto[];
 }
 
+/**
+ * Paginação de reservas com filtro opcional de situação.
+ * O mesmo contrato é usado na consulta de histórico, que considera apenas a paginação.
+ */
 export class ReservationQueryDto extends PaginationDto {
   @ApiPropertyOptional({ enum: ReservationStatus })
   @IsOptional()
@@ -143,11 +170,18 @@ export class ReservationQueryDto extends PaginationDto {
   status?: ReservationStatus;
 }
 
+/**
+ * Ações disponíveis para resolver reservas sem reabrir registros cancelados.
+ */
 export enum ReservationAction {
   CONFIRM = 'CONFIRM',
   CANCEL = 'CANCEL',
 }
 
+/**
+ * Seleção atômica de até 100 IDs únicos pertencentes à mesma saída.
+ * A exigência condicional de motivo ao cancelar é aplicada pela policy no service.
+ */
 export class ResolveReservationsDto {
   @ApiProperty({ type: [String], maxItems: 100 })
   @IsArray()
@@ -168,6 +202,10 @@ export class ResolveReservationsDto {
   reason?: string;
 }
 
+/**
+ * Seleção atômica de passageiros para embarque, ausência ou correção.
+ * A validação de reserva confirmada, propriedade e janela de horário ocorre no service.
+ */
 export class RecordAttendanceDto {
   @ApiProperty({ type: [String], maxItems: 100 })
   @IsArray()
@@ -182,6 +220,10 @@ export class RecordAttendanceDto {
   attendance: AttendanceStatus;
 }
 
+/**
+ * Solicita um estado final da saída; o service rejeita reabertura para SCHEDULED.
+ * Cancelamento exige motivo; conclusão exige reservas e comparecimentos resolvidos.
+ */
 export class ChangeDepartureStatusDto {
   @ApiProperty({ enum: [DepartureStatus.COMPLETED, DepartureStatus.CANCELLED] })
   @IsEnum(DepartureStatus)
@@ -194,6 +236,10 @@ export class ChangeDepartureStatusDto {
   reason?: string;
 }
 
+/**
+ * Período de datas locais inclusivas para o painel, com produto opcional.
+ * O service limita o intervalo a 93 dias e a consulta usa o fuso de cada saída.
+ */
 export class DashboardQueryDto {
   @ApiProperty({ example: '2027-01-01' })
   @IsDateString({ strict: true })
@@ -211,6 +257,9 @@ export class DashboardQueryDto {
   productId?: string;
 }
 
+/**
+ * Motivo de cancelamento de uma reserva própria; não permite alterar responsável ou status.
+ */
 export class CancelReservationDto {
   @ApiProperty()
   @IsString()

@@ -34,6 +34,9 @@ export class SupplierController {
     private readonly authentication: SupplierAuthenticationService
   ) {}
 
+  /**
+   * Retorna o perfil público da própria conta, identificada pelo guard, sem expor o hash.
+   */
   @Get()
   @UseGuards(ReservationAccessGuard)
   @ReservationRole(Role.Supplier)
@@ -62,18 +65,28 @@ export class SupplierController {
     };
   }
 
+  /**
+   * Autentica o fornecedor e retorna tokens e identificação mínima para o painel.
+   */
   @Post('login')
   @HttpCode(HttpStatus.OK)
   loginSupplier(@Body() body: LoginDto) {
     return this.authentication.login(body.email, body.password);
   }
 
+  /**
+   * Renova a sessão com rotação do refresh token, sem exigir access token válido.
+   */
   @Post('relogar')
   @HttpCode(HttpStatus.OK)
   refreshSupplier(@Body() body: RefreshTokenDto) {
     return this.authentication.refresh(body.refreshToken);
   }
 
+  /**
+   * Atualiza somente o fornecedor autenticado; o pipe aplica hash a uma nova senha.
+   * Um id enviado no corpo precisa coincidir com o da sessão.
+   */
   @Patch('atualizar')
   @UseGuards(ReservationAccessGuard)
   @ReservationRole(Role.Supplier)
@@ -92,6 +105,9 @@ export class SupplierController {
     };
   }
 
+  /**
+   * Solicita exclusão da própria conta; vínculos com saídas bloqueiam a remoção do histórico.
+   */
   @Delete('excluir')
   @UseGuards(ReservationAccessGuard)
   @ReservationRole(Role.Supplier)

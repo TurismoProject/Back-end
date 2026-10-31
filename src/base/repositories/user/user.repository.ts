@@ -68,6 +68,17 @@ export class UserRepository implements AbstractUserRepository {
     }
   }
 
+  /**
+   * Redefine a senha mediante consumo único de um token de recuperação persistido.
+   *
+   * @remarks
+   * O DTO valida confirmação e formato da nova senha antes deste método. O segredo
+   * precisa ser do tipo reset e não estar expirado. Consumo, atualização do hash e
+   * remoção dos tokens persistidos da conta são atômicos. Access tokens já emitidos
+   * continuam sujeitos à própria expiração, pois sua validação é stateless.
+   * @returns Confirmação sem devolver o registro do usuário nem seu hash.
+   * @throws {BadRequestException} Se o token estiver inválido, expirado ou já consumido.
+   */
   async resetPassword(dto: UpdatePasswordDto): Promise<ResponseResetPassModel> {
     const password = await bcrypt.hash(dto.newPassword, 10);
     return this.prismaService.$transaction(async (tx) => {
@@ -226,6 +237,12 @@ export class UserRepository implements AbstractUserRepository {
     return;
   }
 
+  /**
+   * Renova o acesso do usuário após conferir finalidade, sessão persistida e conta.
+   *
+   * O refresh token é reutilizado, diferentemente da rotação aplicada ao fornecedor.
+   * @throws {UnauthorizedException} Se a sessão estiver revogada, expirada ou incompatível.
+   */
   async refreshJWT(jwt: string): Promise<AuthModel> {
     const payload = this.authService.validateRefreshToken(jwt);
     const stored = await this.authRepository.searchUserJWT(jwt);

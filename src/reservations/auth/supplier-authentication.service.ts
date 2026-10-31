@@ -4,6 +4,9 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../base/database/prisma/prisma.service';
 import { AuthService } from '../../common/services/auth.service';
 
+/**
+ * Autentica fornecedores e controla a persistência e rotação de seus refresh tokens.
+ */
 @Injectable()
 export class SupplierAuthenticationService {
   constructor(
@@ -11,6 +14,12 @@ export class SupplierAuthenticationService {
     private readonly auth: AuthService
   ) {}
 
+  /**
+   * Valida credenciais e emite tokens com um perfil público mínimo do fornecedor.
+   *
+   * Persiste o refresh token para permitir verificar sua validade na renovação.
+   * @throws {UnauthorizedException} Se as credenciais ou o perfil forem inválidos.
+   */
   async login(email: string, password: string) {
     const supplier = await this.prisma.supplier.findUnique({
       where: { email },
@@ -37,6 +46,15 @@ export class SupplierAuthenticationService {
     };
   }
 
+  /**
+   * Consome o refresh token anterior e salva o substituto na mesma transação.
+   *
+   * @remarks
+   * O delete condicionado a conta, tipo e expiração garante consumo único mesmo
+   * em renovações simultâneas. Uma falha ao salvar o substituto reverte o consumo.
+   * Não exige um access token válido, pois sua expiração é o motivo da renovação.
+   * @throws {UnauthorizedException} Se a sessão estiver expirada, revogada ou já consumida.
+   */
   async refresh(refreshToken: string) {
     const payload = this.auth.validateRefreshToken(refreshToken);
     if (payload.role !== Role.Supplier)

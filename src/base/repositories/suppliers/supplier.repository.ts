@@ -65,6 +65,15 @@ export class SupplierRepository implements AbstractSupplierRepository {
     }
   }
 
+  /**
+   * Exclui a conta antes de tentar remover imagens, preservando saídas e reservas históricas.
+   *
+   * @remarks
+   * A restrição referencial aborta a transação quando há saídas vinculadas aos produtos.
+   * Somente após o commit ocorre a limpeza no storage. Falhas nessa limpeza são
+   * registradas para investigação, sem transformar uma exclusão já efetivada em erro.
+   * @throws {ConflictException} Se o histórico impedir a exclusão do fornecedor.
+   */
   async delete(uuid: string): Promise<null> {
     let urls: string[];
     try {

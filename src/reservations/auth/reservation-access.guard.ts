@@ -14,9 +14,19 @@ import { PrismaService } from '../../base/database/prisma/prisma.service';
 import { ReservationActor } from './reservation-actor';
 
 const RESERVATION_ROLE = 'reservation-role';
+/**
+ * Declara o perfil exigido pelo ReservationAccessGuard na classe ou no handler.
+ * @remarks O decorator define metadados; a aplicação da restrição depende do guard.
+ */
 export const ReservationRole = (role: Extract<Role, 'User' | 'Supplier'>) =>
   SetMetadata(RESERVATION_ROLE, role);
 
+/**
+ * Autentica o acesso às reservas e às operações relacionadas do fornecedor/usuário.
+ *
+ * Confere assinatura RS256, finalidade do token, perfil exigido e conta no banco.
+ * Não substitui a verificação de propriedade de cada saída/reserva nos services.
+ */
 @Injectable()
 export class ReservationAccessGuard implements CanActivate {
   constructor(
@@ -25,6 +35,15 @@ export class ReservationAccessGuard implements CanActivate {
     private readonly reflector: Reflector
   ) {}
 
+  /**
+   * Valida a sessão e disponibiliza uma ReservationActor verificada na requisição.
+   *
+   * @remarks
+   * Refresh tokens e tokens antigos sem tokenUse não são aceitos. A busca usa a tabela
+   * do perfil exigido, impedindo que um ID de usuário seja tratado como fornecedor.
+   * @throws {UnauthorizedException} Se o token ou a conta forem inválidos.
+   * @throws {ForbiddenException} Se o perfil do token não for o exigido pela rota.
+   */
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const match = /^Bearer ([^ ]+)$/i.exec(request.headers.authorization ?? '');

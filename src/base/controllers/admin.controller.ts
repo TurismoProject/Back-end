@@ -38,6 +38,9 @@ export class AdminController {
     return response;
   }
 
+  /**
+   * Restringe a criação de administradores a uma sessão já autenticada com perfil Admin.
+   */
   @Post('cadastro')
   @Roles('Admin')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
@@ -48,6 +51,9 @@ export class AdminController {
     return profile;
   }
 
+  /**
+   * Exige perfil Admin para alterar contas administrativas; a resposta omite o hash da senha.
+   */
   @Put('atualizar/:id')
   @Roles('Admin')
   @UseGuards(AuthGuard('jwt'), RolesGuard)

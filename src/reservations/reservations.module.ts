@@ -12,6 +12,16 @@ import { ReservationRepository } from './reservation.repository';
 import { ReservationService } from './reservation.service';
 import { SupplierDashboardService } from './supplier-dashboard.service';
 
+/**
+ * Agrupa os fluxos de saídas, reservas, participantes e painel do fornecedor.
+ *
+ * @remarks
+ * O código desta funcionalidade fica reunido em `src/reservations`.
+ * Controllers tratam HTTP; services aplicam regras de negócio; o repository
+ * centraliza consultas e transações. As funções de policy reúnem validações
+ * reutilizáveis. DatabaseModule e AuthModule são compartilhados com o legado.
+ * @see docs/reservations.md para contratos HTTP, preparação e testes.
+ */
 @Module({
   imports: [DatabaseModule, AuthModule],
   controllers: [

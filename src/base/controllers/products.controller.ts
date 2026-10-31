@@ -33,6 +33,10 @@ export class ProductsController {
     private readonly repository: AbstractProductsRepository
   ) {}
 
+  /**
+   * Cadastra um produto apenas para o fornecedor da sessão e devolve seu ID.
+   * O ID retornado é usado posteriormente na criação de saídas.
+   */
   @Post('criar')
   @UseGuards(ReservationAccessGuard)
   @ReservationRole(Role.Supplier)

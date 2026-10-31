@@ -66,24 +66,29 @@ model Product {
   departures  TourDeparture[]
 }
 
+/// Ciclo da saída: estados COMPLETED e CANCELLED não podem ser reabertos pelo serviço.
 enum DepartureStatus {
   SCHEDULED
   COMPLETED
   CANCELLED
 }
 
+/// Solicitações PENDING não ocupam vagas; somente CONFIRMED entra na capacidade.
 enum ReservationStatus {
   PENDING
   CONFIRMED
   CANCELLED
 }
 
+/// Comparecimento individual, independente da situação da reserva.
 enum AttendanceStatus {
   NOT_RECORDED
   BOARDED
   NO_SHOW
 }
 
+/// Realização de um passeio em um instante; timeZone define seu dia nos relatórios.
+/// O vínculo Restrict preserva saídas e reservas contra exclusão em cascata do produto.
 model TourDeparture {
   id             String          @id @default(uuid())
   productId      String
@@ -101,6 +106,8 @@ model TourDeparture {
   @@index([startsAt, status])
 }
 
+/// Pedido com responsável e preços preservados no momento da criação.
+/// userId + requestKey identifica reenvios; passageiros são contados pela relação participants.
 model Reservation {
   id                 String                   @id @default(uuid())
   departureId        String
@@ -125,6 +132,8 @@ model Reservation {
   @@index([userId, createdAt])
 }
 
+/// Passageiro previsto, com nome e comparecimento próprio; nomes podem se repetir.
+/// O responsável pela reserva só participa se também tiver um registro nesta tabela.
 model ReservationParticipant {
   id            String           @id @default(uuid())
   reservationId String
@@ -137,6 +146,8 @@ model ReservationParticipant {
   @@index([reservationId, attendance])
 }
 
+/// Auditoria das alterações, gravada na mesma transação da operação correspondente.
+/// actorId e actorRole preservam a autoria sem depender de uma conta ainda existente.
 model ReservationEvent {
   id            String      @id @default(uuid())
   reservationId String

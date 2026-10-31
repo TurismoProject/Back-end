@@ -4,6 +4,45 @@ O backend oferece saídas de passeios, reservas com participantes identificados,
 confirmação/cancelamento em massa e registro individual ou em massa de embarque.
 A interface web será construída sobre estes contratos. Exemplos usam valores em BRL.
 
+## Organização do código
+
+O projeto existente organiza controllers, módulos e repositórios por camada em
+`src/base` e componentes compartilhados em `src/common`. O módulo novo reúne
+suas camadas por funcionalidade em `src/reservations`, reutilizando `DatabaseModule`,
+`AuthModule`, `PrismaService` e os mecanismos de injeção de dependências do NestJS.
+
+| Arquivo/pasta em `src/reservations`       | Responsabilidade                                                  |
+| ----------------------------------------- | ----------------------------------------------------------------- |
+| `reservations.module.ts`                  | Registra controllers, services, guard e repository.               |
+| `reservation.controller.ts`               | Expõe rotas privadas do fornecedor/turista e catálogo público.    |
+| `dto/reservation.dto.ts`                  | Define os pedidos, limites e validações de entrada.               |
+| `auth/reservation-access.guard.ts`        | Verifica token, finalidade, perfil exigido e existência da conta. |
+| `auth/reservation-actor.ts`               | Define e injeta a identidade mínima da conta autenticada.         |
+| `auth/supplier-authentication.service.ts` | Login do fornecedor e rotação de refresh tokens.                  |
+| `departure.service.ts`                    | Criação, consulta, conclusão e cancelamento das saídas.           |
+| `reservation.service.ts`                  | Reservas, repetição de pedidos, ações em massa e comparecimento.  |
+| `reservation.policy.ts`                   | Validações reutilizáveis de capacidade, horários e transições.    |
+| `reservation.repository.ts`               | Consultas Prisma/SQL, escopos de leitura e transações.            |
+| `supplier-dashboard.service.ts`           | Consolida totais e grupos por dia local e passeio.                |
+
+Os arquivos de produção possuem JSDoc em português com responsabilidades, regras
+e condições importantes. O schema Prisma usa comentários `///`, próprios do formato,
+para explicar as entidades. Os testes unitários ficam ao lado da funcionalidade;
+os cenários HTTP e de concorrência estão em `test/app.e2e-spec.ts`.
+
+Ao estender o módulo:
+
+- Use `withLockedDeparture` e o mesmo cliente `tx` em toda mutação que afete
+  ocupação, reservas ou comparecimento. Uma transação independente perde essa garantia.
+- Obtenha o responsável/fornecedor pela sessão. O guard autentica a conta;
+  o service ainda deve conferir a propriedade de cada recurso.
+- Mantenha as regras nos services/policies e as consultas no repository.
+  O repository atual é concreto; o legado também possui contratos abstratos.
+- Grave o evento de auditoria na mesma transação da alteração e evite registrar
+  credenciais ou participantes de outra reserva nos detalhes.
+- Preserve as distinções entre responsável e passageiro, pendente e confirmado,
+  embarcado e participante de passeio concluído.
+
 ## Preparação
 
 Depois de instalar as dependências e configurar `DATABASE_URL` e as chaves RSA:

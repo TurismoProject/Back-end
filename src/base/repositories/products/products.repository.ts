@@ -80,6 +80,15 @@ export class ProductsRepository implements AbstractProductsRepository {
     }
   }
 
+  /**
+   * Exclui o produto somente quando ele não possuir saídas vinculadas.
+   *
+   * A remoção das imagens acontece após a exclusão no banco para não destruir
+   * arquivos de um produto cuja exclusão tenha sido recusada. Falhas externas
+   * na limpeza são registradas em log.
+   * @throws {ConflictException} Se o histórico de saídas impedir a remoção.
+   * @throws {NotFoundException} Se o produto não existir.
+   */
   async delete(id: string): Promise<null> {
     let product: Product;
     try {
@@ -104,6 +113,11 @@ export class ProductsRepository implements AbstractProductsRepository {
     return null;
   }
 
+  /**
+   * Aguarda todas as remoções de imagens dos produtos de um fornecedor.
+   * @returns true se todas concluírem; false se alguma remoção falhar.
+   * @remarks Uma falha não desfaz imagens já removidas, pois o storage é externo ao banco.
+   */
   async deleteAllImagesBySupplierId(supplierId: string): Promise<boolean> {
     const allProducts = await this.findAll(supplierId);
     try {

@@ -19,10 +19,24 @@ import {
   validateTimeZone,
 } from './reservation.policy';
 
+/**
+ * Aplica as regras de criação, consulta e encerramento das saídas de um passeio.
+ *
+ * Uma saída representa uma realização do produto em uma data, horário e fuso,
+ * com capacidade e preço próprios.
+ */
 @Injectable()
 export class DepartureService {
   constructor(private readonly repository: ReservationRepository) {}
 
+  /**
+   * Cadastra uma saída futura para um produto do fornecedor autenticado.
+   *
+   * O preço é independente do preço atual do produto. O fuso IANA será usado
+   * na agregação por dia; startsAt representa um instante com offset explícito.
+   * @throws {NotFoundException} Se o produto não pertencer ao fornecedor.
+   * @throws {ConflictException} Se o produto já tiver saída no mesmo instante.
+   */
   async create(actor: ReservationActor, dto: CreateDepartureDto) {
     validateTimeZone(dto.timeZone);
     requireBeforeDeparture(new Date(dto.startsAt));
@@ -57,6 +71,12 @@ export class DepartureService {
     }
   }
 
+  /**
+   * Valida o intervalo e consulta saídas paginadas e sua disponibilidade.
+   *
+   * @param supplierId Restringe ao fornecedor; omitido somente no catálogo público.
+   * @remarks O intervalo é inclusivo em startsFrom e exclusivo em startsBefore.
+   */
   list(query: DepartureQueryDto, supplierId?: string) {
     if (
       query.startsFrom &&
@@ -70,6 +90,17 @@ export class DepartureService {
     return this.repository.listDepartures(query, supplierId);
   }
 
+  /**
+   * Conclui ou cancela a saída e registra os efeitos nas reservas ativas.
+   *
+   * @remarks
+   * A transação bloqueia a saída e inclui reservas e eventos. Concluir exige início
+   * já ocorrido, nenhuma reserva pendente e comparecimento de todos os confirmados.
+   * Cancelar exige motivo e nenhum embarcado; todas as reservas ativas são canceladas.
+   * Estados finais não são reabertos, e repetir o mesmo estado não gera novos eventos.
+   * @throws {NotFoundException} Se a saída não pertencer ao fornecedor.
+   * @throws {ConflictException} Se a situação atual impedir o encerramento.
+   */
   async changeStatus(
     actor: ReservationActor,
     departureId: string,

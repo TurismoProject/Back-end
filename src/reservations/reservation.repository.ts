@@ -8,10 +8,18 @@ import {
   ReservationQueryDto,
 } from './dto/reservation.dto';
 
+/**
+ * Projeção compartilhada da saída com apenas os dados necessários do produto.
+ * Não inclui credenciais nem dados pessoais do fornecedor.
+ */
 export const departureInclude = {
   product: { select: { id: true, name: true, supplierId: true } },
 } satisfies Prisma.TourDepartureInclude;
 
+/**
+ * Carrega participantes e saída sem trazer o registro completo da conta responsável.
+ * A ordenação por ID estabiliza a lista de participantes entre consultas.
+ */
 export const reservationInclude = {
   participants: { orderBy: { id: 'asc' as const } },
   departure: { include: departureInclude },
@@ -23,8 +31,15 @@ export type DepartureRecord = Prisma.TourDepartureGetPayload<{
 export type ReservationRecord = Prisma.ReservationGetPayload<{
   include: typeof reservationInclude;
 }>;
+/**
+ * Cliente da transação atual; deve ser propagado a todas as gravações da operação.
+ */
 export type ReservationTransaction = Prisma.TransactionClient;
 
+/**
+ * Contagens de uma saída, separando reservas de passageiros e de embarques.
+ * Somente passageiros confirmados entram nos indicadores de comparecimento.
+ */
 export interface DepartureMetrics {
   departureId: string;
   totalReservations: number;
@@ -38,6 +53,9 @@ export interface DepartureMetrics {
   unrecordedParticipants: number;
 }
 
+/**
+ * Métricas de uma saída com a data calculada no respectivo fuso IANA.
+ */
 export type DashboardRow = DepartureMetrics & {
   date: string;
   productId: string;
@@ -45,6 +63,12 @@ export type DashboardRow = DepartureMetrics & {
   status: string;
 };
 
+/**
+ * Agregações reutilizadas na disponibilidade e no painel.
+ *
+ * COUNT DISTINCT evita multiplicar reservas pelo número de participantes no JOIN.
+ * Cancelados e pendentes não entram na ocupação confirmada nem no comparecimento.
+ */
 const metricsSql = Prisma.sql`
   COUNT(DISTINCT r.id)::int AS "totalReservations",
   COUNT(DISTINCT r.id) FILTER (WHERE r.status = 'PENDING')::int AS "pendingReservations",
@@ -57,16 +81,35 @@ const metricsSql = Prisma.sql`
   COUNT(p.id) FILTER (WHERE r.status = 'CONFIRMED' AND p.attendance = 'NOT_RECORDED')::int AS "unrecordedParticipants"
 `;
 
+/**
+ * Centraliza persistência, escopos de consulta e transações do módulo de reservas.
+ *
+ * @remarks
+ * Os services validam regras e propriedade dos recursos. Métodos de gravação
+ * recebem o cliente da transação já aberta para preservar a atomicidade.
+ * Não abra transações independentes dentro de withLockedDeparture.
+ */
 @Injectable()
 export class ReservationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Executa uma mutação sob bloqueio exclusivo da saída no PostgreSQL.
+   *
+   * @param departureId Unidade comum de bloqueio para reservas e comparecimentos.
+   * @param work Operação que deve consultar/gravar usando exclusivamente o tx recebido.
+   * @returns O resultado do callback após o commit; erros revertem todas as gravações.
+   * @remarks
+   * SELECT FOR UPDATE serializa operações da mesma saída. Em READ COMMITTED,
+   * as consultas posteriores ao bloqueio enxergam a ocupação confirmada pelo
+   * concorrente anterior. Toda nova mutação que afete vagas deve seguir este caminho.
+   * O bloqueio não autoriza o acesso: o callback ainda precisa verificar o proprietário.
+   * @throws {NotFoundException} Se a saída não existir.
+   */
   async withLockedDeparture<T>(
     departureId: string,
     work: (tx: ReservationTransaction, departure: DepartureRecord) => Promise<T>
   ): Promise<T> {
-    // Every reservation/attendance mutation locks the same parent row first.
-    // READ COMMITTED then sees the preceding transaction's committed occupancy.
     return this.prisma.$transaction(
       async (tx) => {
         const locked = await tx.$queryRaw<{ id: string }[]>`
@@ -88,6 +131,9 @@ export class ReservationRepository {
     );
   }
 
+  /**
+   * Busca um produto dentro do escopo do fornecedor, sem expor produtos de terceiros.
+   */
   findOwnedProduct(productId: string, supplierId: string) {
     return this.prisma.product.findFirst({
       where: { id: productId, supplierId },
@@ -95,6 +141,10 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Persiste uma saída cujas regras e propriedade já foram validadas pelo service.
+   * A restrição única do banco impede duplicar produto e instante de saída.
+   */
   createDeparture(data: Prisma.TourDepartureUncheckedCreateInput) {
     return this.prisma.tourDeparture.create({
       data,
@@ -102,6 +152,14 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Consulta página, total e ocupação usando a mesma fotografia do banco.
+   *
+   * @param supplierId Escopo privado; omissão representa a consulta pública agregada.
+   * @remarks
+   * REPEATABLE READ mantém itens, total e vagas coerentes durante alterações concorrentes.
+   * A disponibilidade é zero para saídas iniciadas ou em estado final.
+   */
   async listDepartures(query: DepartureQueryDto, supplierId?: string) {
     const where: Prisma.TourDepartureWhereInput = {
       productId: query.productId,
@@ -153,6 +211,12 @@ export class ReservationRepository {
     );
   }
 
+  /**
+   * Calcula métricas sem carregar nomes nem registros individuais dos participantes.
+   *
+   * @param tx Nas mutações, deve ser o cliente que mantém a saída bloqueada.
+   * @remarks Esta consulta não adquire bloqueios nem garante vagas por conta própria.
+   */
   async departureMetrics(
     ids: string[],
     tx: ReservationTransaction = this.prisma
@@ -167,6 +231,10 @@ export class ReservationRepository {
     `);
   }
 
+  /**
+   * Localiza um pedido anterior pela chave única no escopo do usuário.
+   * Usado para impedir duplicação em reenvios e concorrência entre saídas diferentes.
+   */
   findByRequestKey(
     userId: string,
     requestKey: string,
@@ -178,6 +246,10 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Persiste a reserva e seus participantes aninhados na transação do chamador.
+   * O service deve registrar o evento de criação antes do commit.
+   */
   createReservation(
     data: Prisma.ReservationUncheckedCreateInput,
     tx: ReservationTransaction
@@ -185,6 +257,10 @@ export class ReservationRepository {
     return tx.reservation.create({ data, include: reservationInclude });
   }
 
+  /**
+   * Busca apenas IDs da saída informada; o service deve comparar a quantidade retornada.
+   * A diferença indica IDs inexistentes ou de outra saída e invalida a seleção inteira.
+   */
   findReservations(
     departureId: string,
     ids: string[],
@@ -196,6 +272,12 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Lista reservas e total de forma consistente, preservando o escopo obrigatório de acesso.
+   *
+   * @param scope Restrição definida pelo service: usuário ou saída do próprio fornecedor.
+   * @remarks Nunca construa scope a partir de um filtro arbitrário enviado pelo cliente.
+   */
   async listReservations(
     query: ReservationQueryDto,
     scope: Prisma.ReservationWhereInput
@@ -217,6 +299,10 @@ export class ReservationRepository {
     return { items, total, page: query.page, limit: query.limit };
   }
 
+  /**
+   * Busca uma reserva no escopo do usuário sem distinguir inexistência de falta de acesso.
+   * @throws {NotFoundException} Se não houver uma reserva própria com esse ID.
+   */
   async findUserReservation(id: string, userId: string) {
     const reservation = await this.prisma.reservation.findFirst({
       where: { id, userId },
@@ -226,6 +312,10 @@ export class ReservationRepository {
     return reservation;
   }
 
+  /**
+   * Busca uma saída no escopo do fornecedor dono do produto.
+   * @throws {NotFoundException} Se a saída não existir ou pertencer a outro fornecedor.
+   */
   async findSupplierDeparture(id: string, supplierId: string) {
     const departure = await this.prisma.tourDeparture.findFirst({
       where: { id, product: { supplierId } },
@@ -235,6 +325,10 @@ export class ReservationRepository {
     return departure;
   }
 
+  /**
+   * Altera IDs previamente autorizados e validados pelo service na transação bloqueada.
+   * Este método não verifica propriedade nem regras de transição isoladamente.
+   */
   updateReservations(
     ids: string[],
     data: Prisma.ReservationUpdateManyMutationInput,
@@ -243,6 +337,13 @@ export class ReservationRepository {
     return tx.reservation.updateMany({ where: { id: { in: ids } }, data });
   }
 
+  /**
+   * Acrescenta um evento por reserva na mesma transação que alterou o estado.
+   *
+   * @param actor Identidade verificada de quem realizou a operação.
+   * @param details Dados de auditoria da ação, sem credenciais ou tokens.
+   * @remarks Em comparecimentos, envie somente IDs dos participantes da própria reserva.
+   */
   recordEvents(
     ids: string[],
     actor: ReservationActor,
@@ -262,6 +363,10 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Busca participantes da saída com o status da reserva para validar o comparecimento.
+   * O service deve conferir que todos os IDs solicitados foram encontrados.
+   */
   findParticipants(
     departureId: string,
     ids: string[],
@@ -273,6 +378,9 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Atualiza comparecimento dos IDs validados usando a transação que bloqueou a saída.
+   */
   updateParticipants(
     ids: string[],
     data: Prisma.ReservationParticipantUpdateManyMutationInput,
@@ -284,6 +392,9 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Persiste o estado final da saída na mesma transação das reservas e dos eventos.
+   */
   updateDeparture(
     id: string,
     data: Prisma.TourDepartureUpdateInput,
@@ -296,6 +407,9 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Carrega reservas não canceladas para validar conclusão ou cancelamento da saída.
+   */
   activeReservations(departureId: string, tx: ReservationTransaction) {
     return tx.reservation.findMany({
       where: { departureId, status: { not: ReservationStatus.CANCELLED } },
@@ -303,6 +417,10 @@ export class ReservationRepository {
     });
   }
 
+  /**
+   * Pagina eventos após conferir reserva, saída e fornecedor na mesma relação de acesso.
+   * @throws {NotFoundException} Se a reserva não pertencer à saída do fornecedor.
+   */
   async history(
     departureId: string,
     reservationId: string,
@@ -331,6 +449,14 @@ export class ReservationRepository {
     return { items, total, page: query.page, limit: query.limit };
   }
 
+  /**
+   * Agrega uma linha por saída dentro do período local inclusivo e do fornecedor.
+   *
+   * @remarks
+   * A conversão AT TIME ZONE usa o fuso salvo em cada saída antes de extrair o dia.
+   * Os valores interpolados são parâmetros do Prisma, nunca SQL fornecido pelo cliente.
+   * O limite de período é responsabilidade do SupplierDashboardService.
+   */
   dashboard(supplierId: string, query: DashboardQueryDto) {
     return this.prisma.$queryRaw<DashboardRow[]>(Prisma.sql`
       SELECT d.id AS "departureId", d.status::text AS status,

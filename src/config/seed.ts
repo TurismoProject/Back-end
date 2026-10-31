@@ -3,6 +3,10 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+/**
+ * Insere contas de exemplo para desenvolvimento com senhas convertidas em hashes bcrypt.
+ * @remarks Não é idempotente: repetir a execução pode violar campos únicos existentes.
+ */
 async function main() {
   const admin1 = await prisma.admin.create({
     data: {

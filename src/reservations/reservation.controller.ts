@@ -36,13 +36,19 @@ import { DepartureService } from './departure.service';
 import { ReservationService } from './reservation.service';
 import { SupplierDashboardService } from './supplier-dashboard.service';
 
-// Feature-local validation also applies when this module is mounted independently.
+/** Mantém a validação estrita também quando o módulo é carregado isoladamente. */
 const strictValidation = new ValidationPipe({
   transform: true,
   whitelist: true,
   forbidNonWhitelisted: true,
 });
 
+/**
+ * Adaptador HTTP das operações privadas do fornecedor sobre suas saídas e reservas.
+ *
+ * O guard identifica o fornecedor; os services validam a propriedade dos recursos.
+ * Regras e transações ficam fora dos handlers para serem compartilhadas por outros fluxos.
+ */
 @ApiTags('Reservas do fornecedor')
 @ApiBearerAuth()
 @Controller('provedor')
@@ -56,6 +62,9 @@ export class SupplierReservationsController {
     private readonly dashboard: SupplierDashboardService
   ) {}
 
+  /**
+   * Publica uma realização futura de um passeio do fornecedor autenticado.
+   */
   @Post('saidas')
   @ApiOperation({
     summary: 'Criar uma saída de um passeio do fornecedor autenticado',
@@ -67,6 +76,9 @@ export class SupplierReservationsController {
     return this.departures.create(actor, dto);
   }
 
+  /**
+   * Lista saídas próprias com filtros, paginação e disponibilidade.
+   */
   @Get('saidas')
   listDepartures(
     @CurrentReservationActor() actor: ReservationActor,
@@ -75,6 +87,9 @@ export class SupplierReservationsController {
     return this.departures.list(query, actor.id);
   }
 
+  /**
+   * Solicita conclusão ou cancelamento da saída e dos efeitos associados às reservas.
+   */
   @Patch('saidas/:departureId/status')
   changeStatus(
     @CurrentReservationActor() actor: ReservationActor,
@@ -84,6 +99,9 @@ export class SupplierReservationsController {
     return this.departures.changeStatus(actor, id, dto);
   }
 
+  /**
+   * Expõe ao fornecedor os responsáveis e passageiros da própria saída.
+   */
   @Get('saidas/:departureId/reservas')
   listReservations(
     @CurrentReservationActor() actor: ReservationActor,
@@ -93,6 +111,9 @@ export class SupplierReservationsController {
     return this.reservations.listForSupplier(actor, id, query);
   }
 
+  /**
+   * Aplica confirmação/cancelamento a uma seleção de 1 a 100 reservas da mesma saída.
+   */
   @Patch('saidas/:departureId/reservas/resolver')
   @ApiOperation({
     summary: 'Confirmar ou cancelar de 1 a 100 reservas atomicamente',
@@ -105,6 +126,9 @@ export class SupplierReservationsController {
     return this.reservations.resolve(actor, id, dto);
   }
 
+  /**
+   * Registra embarque, ausência ou correção de 1 a 100 passageiros da mesma saída.
+   */
   @Patch('saidas/:departureId/participantes/comparecimento')
   @ApiOperation({
     summary: 'Registrar ou corrigir o comparecimento de 1 a 100 participantes',
@@ -117,6 +141,9 @@ export class SupplierReservationsController {
     return this.reservations.recordAttendance(actor, id, dto);
   }
 
+  /**
+   * Consulta a auditoria paginada de uma reserva da saída do fornecedor.
+   */
   @Get('saidas/:departureId/reservas/:reservationId/historico')
   history(
     @CurrentReservationActor() actor: ReservationActor,
@@ -132,6 +159,9 @@ export class SupplierReservationsController {
     );
   }
 
+  /**
+   * Consulta totais por período e grupos por dia local e passeio.
+   */
   @Get('painel/reservas')
   summary(
     @CurrentReservationActor() actor: ReservationActor,
@@ -141,6 +171,10 @@ export class SupplierReservationsController {
   }
 }
 
+/**
+ * Adaptador HTTP para o turista criar, consultar e cancelar suas próprias reservas.
+ * O responsável é sempre a conta autenticada; a lista de passageiros pode ser diferente.
+ */
 @ApiTags('Reservas do turista')
 @ApiBearerAuth()
 @Controller('usuario/reservas')
@@ -150,6 +184,9 @@ export class SupplierReservationsController {
 export class UserReservationsController {
   constructor(private readonly reservations: ReservationService) {}
 
+  /**
+   * Cria uma solicitação pendente; requestKey permite reenviar o pedido sem duplicação.
+   */
   @Post()
   create(
     @CurrentReservationActor() actor: ReservationActor,
@@ -166,6 +203,9 @@ export class UserReservationsController {
     return this.reservations.listForUser(actor, query);
   }
 
+  /**
+   * Consulta uma reserva dentro do escopo do usuário autenticado.
+   */
   @Get(':id')
   get(
     @CurrentReservationActor() actor: ReservationActor,
@@ -174,6 +214,9 @@ export class UserReservationsController {
     return this.reservations.getForUser(actor, id);
   }
 
+  /**
+   * Solicita cancelamento de uma reserva própria com motivo informado.
+   */
   @Patch(':id/cancelar')
   cancel(
     @CurrentReservationActor() actor: ReservationActor,
@@ -184,6 +227,9 @@ export class UserReservationsController {
   }
 }
 
+/**
+ * Catálogo público de saídas e disponibilidade, sem nomes de responsáveis ou passageiros.
+ */
 @ApiTags('Catálogo de saídas')
 @Controller('passeios/saidas')
 @UsePipes(strictValidation)

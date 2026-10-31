@@ -24,10 +24,24 @@ import {
   requireScheduled,
 } from './reservation.policy';
 
+/**
+ * Coordena a criação e a resolução de reservas e o comparecimento dos participantes.
+ *
+ * @remarks
+ * O responsável vem da sessão; os passageiros vêm da lista de participantes.
+ * Reservas pendentes não bloqueiam vagas. Toda mutação usa o bloqueio da saída
+ * no repository para serializar alterações de capacidade e de comparecimento.
+ */
 @Injectable()
 export class ReservationService {
   constructor(private readonly repository: ReservationRepository) {}
 
+  /**
+   * Reconhece um reenvio pelo conteúdo da reserva, ignorando a ordem dos nomes.
+   *
+   * Nomes repetidos são preservados: pessoas diferentes podem ter o mesmo nome.
+   * @throws {ConflictException} Se a chave já representar outra saída ou lista.
+   */
   private validateRetry(
     existing: ReservationRecord,
     dto: CreateReservationDto
@@ -46,6 +60,19 @@ export class ReservationService {
     return existing;
   }
 
+  /**
+   * Cria uma reserva pendente com participantes e preços copiados da saída.
+   *
+   * @param actor Usuário autenticado, usado como responsável pela reserva.
+   * @param dto Saída, chave de repetição do pedido e passageiros que pretendem embarcar.
+   * @returns A reserva criada ou a mesma reserva em um reenvio compatível.
+   * @remarks
+   * A quantidade de pessoas deriva da lista; o responsável não entra automaticamente.
+   * O total é calculado com Decimal. A chave é única por usuário, e o tratamento de
+   * P2002 também cobre pedidos simultâneos que bloqueiam saídas diferentes.
+   * @throws {ConflictException} Se não houver vagas, a saída estiver fechada/iniciada
+   * ou a chave já tiver sido usada com outro conteúdo.
+   */
   async create(actor: ReservationActor, dto: CreateReservationDto) {
     try {
       return await this.repository.withLockedDeparture(
@@ -110,14 +137,25 @@ export class ReservationService {
     }
   }
 
+  /**
+   * Lista somente as reservas do usuário autenticado, com paginação e filtro de status.
+   */
   listForUser(actor: ReservationActor, query: ReservationQueryDto) {
     return this.repository.listReservations(query, { userId: actor.id });
   }
 
+  /**
+   * Obtém uma reserva própria sem revelar a existência de reservas de outros usuários.
+   * @throws {NotFoundException} Se a reserva não existir ou pertencer a outra conta.
+   */
   getForUser(actor: ReservationActor, id: string) {
     return this.repository.findUserReservation(id, actor.id);
   }
 
+  /**
+   * Lista responsáveis e participantes de uma saída pertencente ao fornecedor.
+   * @throws {NotFoundException} Se a saída não pertencer ao fornecedor autenticado.
+   */
   async listForSupplier(
     actor: ReservationActor,
     departureId: string,
@@ -130,6 +168,9 @@ export class ReservationService {
     });
   }
 
+  /**
+   * Consulta eventos paginados após verificar a relação entre reserva, saída e fornecedor.
+   */
   history(
     departureId: string,
     reservationId: string,
@@ -144,6 +185,12 @@ export class ReservationService {
     );
   }
 
+  /**
+   * Cancela uma reserva própria usando as mesmas regras e transação da operação em massa.
+   *
+   * O usuário só pode cancelar antes do início, sem participantes embarcados.
+   * Um reenvio de cancelamento já aplicado não duplica o histórico.
+   */
   async cancelForUser(actor: ReservationActor, id: string, reason: string) {
     const reservation = await this.repository.findUserReservation(id, actor.id);
     return this.resolve(actor, reservation.departureId, {
@@ -153,6 +200,20 @@ export class ReservationService {
     });
   }
 
+  /**
+   * Confirma ou cancela uma seleção de reservas da mesma saída em uma transação.
+   *
+   * @param actor Fornecedor responsável pela saída ou usuário cancelando a própria reserva.
+   * @param departureId Saída usada como unidade de bloqueio e de autorização.
+   * @param dto IDs únicos, ação e motivo obrigatório para novos cancelamentos.
+   * @returns Totais solicitados/alterados e situação final da seleção.
+   * @remarks
+   * IDs de outra saída/conta invalidam a seleção inteira. Confirmação é exclusiva
+   * do fornecedor e recalcula vagas apenas para as reservas que mudarão de status.
+   * Repetir o estado desejado é uma operação sem alteração nem novos eventos.
+   * @throws {NotFoundException} Se algum recurso não pertencer à saída ou conta.
+   * @throws {ConflictException} Se uma transição, capacidade ou embarque impedir a ação.
+   */
   resolve(
     actor: ReservationActor,
     departureId: string,
@@ -244,6 +305,19 @@ export class ReservationService {
     );
   }
 
+  /**
+   * Registra ou corrige o comparecimento de participantes da mesma saída atomicamente.
+   *
+   * @param actor Fornecedor dono do passeio, verificado contra a saída bloqueada.
+   * @param departureId Saída dos participantes selecionados.
+   * @param dto IDs únicos e situação de comparecimento a aplicar.
+   * @returns Quantidades solicitada/alterada e comparecimento desejado.
+   * @remarks
+   * Exige reservas confirmadas e saída agendada. Embarque abre duas horas antes;
+   * ausência só é aceita a partir do início. NOT_RECORDED limpa autor/data atuais,
+   * mas mantém os eventos anteriores. Eventos são separados por reserva para que
+   * cada histórico contenha apenas os participantes daquela reserva.
+   */
   recordAttendance(
     actor: ReservationActor,
     departureId: string,
