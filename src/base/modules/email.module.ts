@@ -32,7 +32,7 @@ import { join } from 'path';
                     },
                     defaults: {
                         from: configService.get<string>('EMAIL_DEFAULT'),
-                    },
+                    } as any,
                     template: {
                         dir: join(process.cwd(), 'dist', 'templates'),
                         adapter: new PugAdapter(),

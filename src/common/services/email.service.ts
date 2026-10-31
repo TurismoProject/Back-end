@@ -16,7 +16,7 @@ export class EmailService {
                 }
             });
 
-            return { response };
+            return response;
         } catch (error) {
             throw new InternalServerErrorException('Erro ao enviar o e-mail de recuperação de senha.');
         }

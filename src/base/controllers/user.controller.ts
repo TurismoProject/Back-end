@@ -7,6 +7,7 @@ import { PasswordHasherPipe } from '@common/pipes/password-hasher.pipe';
 import { Roles } from '@decorators/user-roles.decorator';
 import { CreateUserWithGoogleDto } from '@dtos/create-user-google.dto';
 import { CreateUserDto } from '@dtos/create-user.dto';
+import { LoginGoogleDto } from '@dtos/login-google.dto';
 import { LoginDto } from '@dtos/login.dto';
 import { UpdatePasswordDto } from '@dtos/update-new-password.dto';
 import { UpdateUserDto } from '@dtos/update-user.dto';
@@ -35,8 +36,12 @@ import { AbstractUserRepository } from '@repositories/user/abstract-user.reposit
 @ApiTags('usuario')
 export class UserController {
   private readonly frontendUrl: string;
-  constructor(private readonly repository: AbstractUserRepository, private readonly configService: ConfigService) {
-    this.frontendUrl = this.configService.get<string>('FRONTEND_URL');
+  constructor(
+    private readonly repository: AbstractUserRepository,
+    private readonly configService: ConfigService
+  ) {
+    this.frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
   }
 
   @Post('cadastro')
@@ -48,20 +53,43 @@ export class UserController {
 
   @Get('auth/google')
   @UseGuards(AuthGuard('google'))
-  async googleLogin() { }
+  async googleLogin() {}
+
+  @Get('auth/google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthCallback(@Req() req, @Res() res) {
+    const result = await this.repository.createWithGoogle(req.user);
+    return res.redirect(
+      `${this.frontendUrl}/auth/callback?token=${result.token}&refreshToken=${result.refreshToken}`
+    );
+  }
 
   @Get('auth/google/create/callback')
   @UseGuards(AuthGuard('google'))
   async googleCreateRedirect(@Req() req, @Res() res) {
     const result = await this.repository.createWithGoogle(req.user);
-    return res.redirect(`${this.frontendUrl}/create/callback?token=${result.token}`);
+    return res.redirect(
+      `${this.frontendUrl}/create/callback?token=${result.token}&refreshToken=${result.refreshToken}`
+    );
+  }
+
+  @Post('auth/google/test')
+  async testGoogleAuth(@Body() body: CreateUserWithGoogleDto) {
+    return this.repository.createWithGoogle(body);
+  }
+
+  @Post('auth/google/login/test')
+  async testGoogleLogin(@Body() body: LoginGoogleDto) {
+    return this.repository.loginWithGoogle(body);
   }
 
   @Get('auth/google/login/callback')
   @UseGuards(AuthGuard('google'))
   async googleLoginRedirect(@Req() req, @Res() res) {
     const result = await this.repository.loginWithGoogle(req.user);
-    return res.redirect(`${this.frontendUrl}/login/callback?token=${result.token}`);
+    return res.redirect(
+      `${this.frontendUrl}/login/callback?token=${result.token}&refreshToken=${result.refreshToken}`
+    );
   }
 
   @Post('login')
@@ -86,7 +114,9 @@ export class UserController {
 
   @Post('forgot-password')
   async forgetPasswordUser(@Body() body: { email: string }) {
-    const response = await this.repository.sendUserPasswordResetLink(body.email);
+    const response = await this.repository.sendUserPasswordResetLink(
+      body.email
+    );
     return response;
   }
 
