@@ -12,6 +12,7 @@ import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
+<<<<<<< Updated upstream
     constructor(
         private reflector: Reflector,
         private jwtService: JwtService,
@@ -19,6 +20,18 @@ export class RolesGuard implements CanActivate {
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const requiredRoles = this.reflector.get<Role[]>(ROLES_KEY, context.getHandler());
+=======
+  constructor(
+    private reflector: Reflector,
+    private jwtService: JwtService,
+  ) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const requiredRoles = this.reflector.get<Role[]>(
+      ROLES_KEY,
+      context.getHandler(),
+    );
+>>>>>>> Stashed changes
 
         if (!requiredRoles) {
             return true;
@@ -52,4 +65,42 @@ export class RolesGuard implements CanActivate {
 
         return true;
     }
+<<<<<<< Updated upstream
+=======
+
+    const request = context.switchToHttp().getRequest();
+    const authHeader = request.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw new UnauthorizedException('Token inválido');
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(token);
+    } catch (err) {
+      throw new UnauthorizedException('Token inválido ou expirado');
+    }
+
+    const userRole = String(
+      payload.role || payload.userType || '',
+    ).toUpperCase();
+
+    const hasRole = requiredRoles.some(
+      (role) => String(role).toUpperCase() === userRole,
+    );
+
+    if (!hasRole) {
+      throw new ForbiddenException(
+        'Usuário sem permissão para acessar este recurso',
+      );
+    }
+
+    request.user = payload;
+
+    return true;
+  }
+>>>>>>> Stashed changes
 }

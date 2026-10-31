@@ -11,8 +11,9 @@ import { User } from '@prisma/client';
 export abstract class AbstractUserRepository {
   abstract create(user: CreateUserDto): Promise<User>;
   abstract createWithGoogle(
-    user: CreateUserWithGoogleDto
+    user: CreateUserWithGoogleDto,
   ): Promise<GoogleAuthentication>;
+<<<<<<< Updated upstream
   abstract login(email: string, password: string): Promise<AuthModel>;
   abstract loginWithGoogle(user: LoginGoogleDto): Promise<GoogleAuthentication>;
   abstract logout(jwt: string): Promise<void>;
@@ -23,4 +24,18 @@ export abstract class AbstractUserRepository {
   abstract deleteUser(id: string): Promise<User>;
   abstract sendUserPasswordResetLink(email: string): Promise<ResetPassword>;
   abstract resetPassword(PasswordDto: UpdatePasswordDto): Promise<ResponseResetPassModel>;
+=======
+  abstract loginWithGoogle(
+    user: LoginGoogleDto | CreateUserWithGoogleDto,
+  ): Promise<GoogleAuthentication>;
+
+  abstract emailInUse(email: string): Promise<boolean>;
+  abstract phoneInUse(phoneNumber: string): Promise<boolean>;
+  abstract cpfInUse(cpf: string): Promise<boolean>;
+
+  abstract sendUserPasswordResetLink(email: string): Promise<ResetPassword>;
+  abstract resetPassword(
+    PasswordDto: UpdatePasswordDto,
+  ): Promise<ResponseResetPassModel>;
+>>>>>>> Stashed changes
 }

@@ -20,8 +20,20 @@ export class FileService {
       contentType: file.mimetype,
     };
 
+<<<<<<< Updated upstream
     const result = await uploadBytesResumable(fileRef, file.buffer, metadata);
     return await getDownloadURL(result.ref);
+=======
+    await client.putObject(
+      bucket,
+      `${folder}/${fileName}`,
+      file.buffer,
+      file.size,
+      metadata,
+    );
+
+    return fileName;
+>>>>>>> Stashed changes
   }
 
   async deleteFile(url: string) {

@@ -19,6 +19,7 @@ import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-auth
 @Injectable()
 export class AdminRepository implements AbstractAdminRepository {
   constructor(
+<<<<<<< Updated upstream
     private readonly prismaService: PrismaService,
     private readonly authService: AuthService,
     private readonly authRepository: AbstractAuthenticateRepository
@@ -35,6 +36,13 @@ export class AdminRepository implements AbstractAdminRepository {
         `Erro ao criar o admin: ${error.message}`
       );
     }
+=======
+    protected readonly prismaService: PrismaService,
+    protected readonly jwtGenService: JwtGeneratorService,
+    protected readonly authRepository: AbstractAuthenticateRepository,
+  ) {
+    super(prismaService, authRepository, jwtGenService);
+>>>>>>> Stashed changes
   }
 
   async login(email: string, password: string): Promise<AuthModel> {

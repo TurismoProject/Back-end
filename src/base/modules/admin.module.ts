@@ -12,4 +12,4 @@ import { EmailModule } from './email.module';
   providers: [{ provide: AbstractAdminRepository, useClass: AdminRepository }],
   exports: [],
 })
-export class AdminModule { }
+export class AdminModule {}

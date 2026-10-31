@@ -38,9 +38,17 @@ export class AuthenticateRepository implements AbstractAuthenticateRepository {
     return savedJWT;
   }
 
+<<<<<<< Updated upstream
   async savingRecoveryToken(authData: AuthResetPassModel): Promise<UserJWTs> {
 
     const savedToken = await this.prismaService.userJWTs.create({
+=======
+  async savingRecoveryToken(
+    authData: AuthResetPassModel,
+    role: Role = Role.USER,
+  ): Promise<AuthToken> {
+    const savedToken = await this.prismaService.authToken.create({
+>>>>>>> Stashed changes
       data: {
         token: authData.token,
         expiresAt: authData.expirationDateToken,
@@ -51,9 +59,17 @@ export class AuthenticateRepository implements AbstractAuthenticateRepository {
     return savedToken;
   }
 
+<<<<<<< Updated upstream
   async authenticateSupplier(authData: AuthModel): Promise<SupplierJWTs> {
     const { authId, refreshToken, expirationDateRefreshToken } = authData;
     const expirationDate = new Date(expirationDateRefreshToken);
+=======
+  async searchJwt(jwt: string, type?: JwtTokenType): Promise<AuthToken | null> {
+    const whereClause: any = { token: jwt };
+    if (type) {
+      whereClause.type = type;
+    }
+>>>>>>> Stashed changes
 
     const savedJWT = await this.prismaService.supplierJWTs.create({
       data: {

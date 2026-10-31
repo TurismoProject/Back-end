@@ -28,7 +28,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiTags } from '@nestjs/swagger';
-import { User } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { AbstractUserRepository } from '@repositories/user/abstract-user.repository';
 
 @Controller('usuario')
@@ -38,7 +38,12 @@ export class UserController {
   private readonly frontendUrl: string;
   constructor(
     private readonly repository: AbstractUserRepository,
+<<<<<<< Updated upstream
     private readonly configService: ConfigService
+=======
+
+    private readonly configService: ConfigService,
+>>>>>>> Stashed changes
   ) {
     this.frontendUrl =
       this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
@@ -60,7 +65,7 @@ export class UserController {
   async googleAuthCallback(@Req() req, @Res() res) {
     const result = await this.repository.createWithGoogle(req.user);
     return res.redirect(
-      `${this.frontendUrl}/auth/callback?token=${result.token}&refreshToken=${result.refreshToken}`
+      `${this.frontendUrl}/auth/callback?token=${result.token}&refreshToken=${result.refreshToken}`,
     );
   }
 
@@ -69,7 +74,7 @@ export class UserController {
   async googleCreateRedirect(@Req() req, @Res() res) {
     const result = await this.repository.createWithGoogle(req.user);
     return res.redirect(
-      `${this.frontendUrl}/create/callback?token=${result.token}&refreshToken=${result.refreshToken}`
+      `${this.frontendUrl}/create/callback?token=${result.token}&refreshToken=${result.refreshToken}`,
     );
   }
 
@@ -88,7 +93,7 @@ export class UserController {
   async googleLoginRedirect(@Req() req, @Res() res) {
     const result = await this.repository.loginWithGoogle(req.user);
     return res.redirect(
-      `${this.frontendUrl}/login/callback?token=${result.token}&refreshToken=${result.refreshToken}`
+      `${this.frontendUrl}/login/callback?token=${result.token}&refreshToken=${result.refreshToken}`,
     );
   }
 
@@ -115,7 +120,7 @@ export class UserController {
   @Post('forgot-password')
   async forgetPasswordUser(@Body() body: { email: string }) {
     const response = await this.repository.sendUserPasswordResetLink(
-      body.email
+      body.email,
     );
     return response;
   }
@@ -129,7 +134,7 @@ export class UserController {
 
   // @UseGuards(LocalAuthGuard)
   @Put('atualizar/:id')
-  @Roles('admin')
+  @Roles(Role.ADMIN)
   @UseGuards(AuthGuard('jwt'))
   @UsePipes(new PasswordHasherPipe<User>())
   async update(@Param('id') id: string, @Body() user: UpdateUserDto) {
@@ -138,7 +143,11 @@ export class UserController {
   }
 
   @Get('informacoes')
+<<<<<<< Updated upstream
   @Roles('admin')
+=======
+  // @Roles(Role.ADMIN)
+>>>>>>> Stashed changes
   @UseGuards(AuthGuard('jwt'))
   async getUser(@Headers('Authorization') authorization: string) {
     const accessToken = authorization.split(' ')[1];
@@ -153,7 +162,7 @@ export class UserController {
   }
 
   @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('Admin')
+  @Roles(Role.ADMIN)
   @Delete('excluir/:id')
   @UsePipes(new PasswordHasherPipe<User>())
   async deleteUser(@Param('id') id: string) {
@@ -164,7 +173,7 @@ export class UserController {
     };
   }
 
-  @Roles('Admin')
+  @Roles(Role.ADMIN)
   @Get('buscar/todos')
   // @UseGuards(AuthGuard('jwt'), RolesGuard)
   async findAll(@Req() req) {

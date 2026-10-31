@@ -4,21 +4,27 @@ import { SentMessageInfo } from 'nodemailer';
 
 @Injectable()
 export class EmailService {
-    constructor(private readonly mailerService: MailerService) { }
-    async sendEmail(to: string, subject: string, resetLink: string): Promise<SentMessageInfo> {
-        try {
-            const response = await this.mailerService.sendMail({
-                to,
-                subject,
-                template: 'forget',
-                context: {
-                    resetLink
-                }
-            });
+  constructor(private readonly mailerService: MailerService) {}
+  async sendEmail(
+    to: string,
+    subject: string,
+    resetLink: string,
+  ): Promise<SentMessageInfo> {
+    try {
+      const response = await this.mailerService.sendMail({
+        to,
+        subject,
+        template: 'forget',
+        context: {
+          resetLink,
+        },
+      });
 
-            return response;
-        } catch (error) {
-            throw new InternalServerErrorException('Erro ao enviar o e-mail de recuperação de senha.');
-        }
+      return response;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Erro ao enviar o e-mail de recuperação de senha.',
+      );
     }
+  }
 }

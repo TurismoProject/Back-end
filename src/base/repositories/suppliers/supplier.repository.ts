@@ -14,6 +14,7 @@ import { AbstractProductsRepository } from '@repositories/products/abstract-prod
 @Injectable()
 export class SupplierRepository implements AbstractSupplierRepository {
   constructor(
+<<<<<<< Updated upstream
     private readonly prismaService: PrismaService,
     private readonly productRepository: AbstractProductsRepository
   ) { }
@@ -27,6 +28,14 @@ export class SupplierRepository implements AbstractSupplierRepository {
     return await this.prismaService.supplier.create({
       data,
     });
+=======
+    protected readonly prismaService: PrismaService,
+    protected readonly jwtGenService: JwtGeneratorService,
+    protected readonly authRepository: AbstractAuthenticateRepository,
+    private readonly dashboardService: DashboardService,
+  ) {
+    super(prismaService, authRepository, jwtGenService);
+>>>>>>> Stashed changes
   }
 
   async getAll(): Promise<Array<Supplier>> {

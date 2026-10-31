@@ -12,4 +12,4 @@ import { EmailModule } from './email.module';
   providers: [{ provide: AbstractUserRepository, useClass: UserRepository }],
   exports: [],
 })
-export class UserModule { }
+export class UserModule {}

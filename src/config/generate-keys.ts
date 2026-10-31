@@ -13,7 +13,7 @@ fs.writeFileSync('private_key.pem', privateKey);
 fs.writeFileSync('public_key.pem', publicKey);
 
 console.log(
-  "✅ Chaves geradas e salvas como 'private_key.pem' e 'public_key.pem'."
+  "✅ Chaves geradas e salvas como 'private_key.pem' e 'public_key.pem'.",
 );
 
 function convertPemToBase64(filePath: string) {
@@ -29,5 +29,5 @@ fs.writeFileSync('private_key_base64.txt', privateKeyBase64);
 fs.writeFileSync('public_key_base64.txt', publicKeyBase64);
 
 console.log(
-  "✅ Chaves convertidas para Base64 e salvas como 'private_key_base64.txt' e 'public_key_base64.txt'."
+  "✅ Chaves convertidas para Base64 e salvas como 'private_key_base64.txt' e 'public_key_base64.txt'.",
 );

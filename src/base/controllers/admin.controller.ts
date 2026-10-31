@@ -28,16 +28,15 @@ export class AdminController {
   async login(@Body() user: LoginDto) {
     const logIn: AuthModel = await this.repository.login(
       user.email,
-      user.password
+      user.password,
     );
     return logIn;
   }
 
   @Post('forgot-password')
   async forgetPasswordAdmin() {
-    const response = console.log()//await this.repository.forgetPasswordAdmin();
+    const response = console.log(); //await this.repository.forgetPasswordAdmin();
     return response;
-
   }
 
   @Post('cadastro')

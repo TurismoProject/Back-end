@@ -1,5 +1,5 @@
 export class GoogleAuthentication {
-    user: any;
-    token: string;
-    refreshToken?: string;
+  user: any;
+  token: string;
+  refreshToken?: string;
 }

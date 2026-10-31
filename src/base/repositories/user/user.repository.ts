@@ -25,6 +25,7 @@ import { LoginGoogleDto } from '@dtos/login-google.dto';
 @Injectable()
 export class UserRepository implements AbstractUserRepository {
   constructor(
+<<<<<<< Updated upstream
     private readonly prismaService: PrismaService,
     private readonly authService: AuthService,
     private readonly emailService: EmailService,
@@ -33,6 +34,15 @@ export class UserRepository implements AbstractUserRepository {
   async sendUserPasswordResetLink(email: string): Promise<ResetPassword> {
     const user = await this.findByEmail(email);
     const token = this.authService.generateResetToken(user);
+=======
+    protected readonly prismaService: PrismaService,
+    protected readonly jwtGenService: JwtGeneratorService,
+    protected readonly authRepository: AbstractAuthenticateRepository,
+    private readonly emailService: EmailService,
+  ) {
+    super(prismaService, authRepository, jwtGenService);
+  }
+>>>>>>> Stashed changes
 
     const authData: AuthResetPassModel = {
       token: token.token,
@@ -67,7 +77,7 @@ export class UserRepository implements AbstractUserRepository {
   }
 
   async createWithGoogle(
-    user: CreateUserWithGoogleDto
+    user: CreateUserWithGoogleDto,
   ): Promise<GoogleAuthentication> {
     try {
       const existingUser = await this.prismaService.user.findFirst({
@@ -115,12 +125,18 @@ export class UserRepository implements AbstractUserRepository {
       };
     } catch (error) {
       throw new ConflictException(
-        `Erro ao criar ou autenticar usuário com Google: ${error.message}`
+        `Erro ao criar ou autenticar usuário com Google: ${error.message}`,
       );
     }
   }
 
+<<<<<<< Updated upstream
   async loginWithGoogle(user: LoginGoogleDto): Promise<GoogleAuthentication> {
+=======
+  async loginWithGoogle(
+    user: LoginGoogleDto | CreateUserWithGoogleDto,
+  ): Promise<GoogleAuthentication> {
+>>>>>>> Stashed changes
     try {
       const existingUser = await this.prismaService.user.findFirst({
         where: {
@@ -161,7 +177,7 @@ export class UserRepository implements AbstractUserRepository {
         throw error;
       }
       throw new UnauthorizedException(
-        `Erro ao fazer login com Google: ${error.message}`
+        `Erro ao fazer login com Google: ${error.message}`,
       );
     }
   }
@@ -178,7 +194,64 @@ export class UserRepository implements AbstractUserRepository {
       expirationDateRefreshToken: token.expirationDateRefreshToken,
     };
 
+<<<<<<< Updated upstream
     await this.authRepository.authenticateUser(authData);
+=======
+    const resetLink = `http://localhost:3000/reset-password/${token.token}`;
+
+    try {
+      await this.emailService.sendEmail(
+        user.email,
+        'Recuperação de senha',
+        resetLink,
+      );
+
+      await this.authRepository.savingRecoveryToken(authData, Role.USER);
+
+      const response: ResetPassword = {
+        message: 'Email enviado com sucesso',
+        email: user.email,
+        Type: JwtTokenType.reset,
+      };
+
+      return response;
+    } catch (error: any) {
+      throw new InternalServerErrorException(
+        `Erro ao enviar email para o destinatário ${user.email}: ${error.message}`,
+      );
+    }
+  }
+
+  async resetPassword(
+    passwordDto: UpdatePasswordDto,
+  ): Promise<ResponseResetPassModel> {
+    const tokenRecord = await this.authRepository.searchJwt(
+      passwordDto.token,
+      JwtTokenType.reset,
+    );
+
+    if (!tokenRecord) {
+      throw new BadRequestException('Token inválido');
+    }
+
+    if (tokenRecord.expiresAt < new Date()) {
+      await this.authRepository.eraseJwt(passwordDto.token);
+      throw new BadRequestException('Token expirado');
+    }
+
+    const hashedPassword = await bcrypt.hash(passwordDto.newPassword, 10);
+
+    const updatedUser = await this.prismaService.user.update({
+      where: {
+        id: tokenRecord.userId,
+      },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    await this.authRepository.eraseJwt(passwordDto.token);
+>>>>>>> Stashed changes
 
     return {
       accessToken: token.accessToken,
@@ -334,7 +407,7 @@ export class UserRepository implements AbstractUserRepository {
     if (age < 18) {
       validateBirthUser = false;
       throw new BadRequestException(
-        'O usuário deve ter pelo menos 18 anos para se cadastrar!'
+        'O usuário deve ter pelo menos 18 anos para se cadastrar!',
       );
     }
     return Promise.resolve(validateBirthUser);

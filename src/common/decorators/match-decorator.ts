@@ -1,13 +1,14 @@
 import {
-    registerDecorator,
-    ValidationOptions,
-    ValidationArguments,
+  registerDecorator,
+  ValidationOptions,
+  ValidationArguments,
 } from 'class-validator';
 
 export function Match(
-    property: string,
-    validationOptions?: ValidationOptions,
+  property: string,
+  validationOptions?: ValidationOptions,
 ): PropertyDecorator {
+<<<<<<< Updated upstream
     return (object: Record<string, any>, propertyName: string) => {
         registerDecorator({
             name: 'Match',
@@ -28,4 +29,26 @@ export function Match(
             },
         });
     };
+=======
+  return (object: any, propertyName: string | symbol) => {
+    registerDecorator({
+      name: 'Match',
+      target: object.constructor,
+      propertyName: propertyName as string,
+      constraints: [property],
+      options: validationOptions,
+      validator: {
+        validate(value: any, args: ValidationArguments): boolean {
+          const [relatedPropertyName] = args.constraints;
+          const relatedValue = (args.object as any)[relatedPropertyName];
+          return value === relatedValue;
+        },
+        defaultMessage(args: ValidationArguments): string {
+          const [relatedPropertyName] = args.constraints;
+          return `${args.property} deve ser igual a ${relatedPropertyName}`;
+        },
+      },
+    });
+  };
+>>>>>>> Stashed changes
 }
