@@ -39,7 +39,8 @@ export class UserController {
     private readonly repository: AbstractUserRepository,
     private readonly configService: ConfigService
   ) {
-    this.frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    this.frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
   }
 
   @Post('cadastro')
@@ -53,12 +54,21 @@ export class UserController {
   @UseGuards(AuthGuard('google'))
   async googleLogin() {}
 
+  @Get('auth/google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthCallback(@Req() req, @Res() res) {
+    const result = await this.repository.createWithGoogle(req.user);
+    return res.redirect(
+      `${this.frontendUrl}/auth/callback?token=${result.token}&refreshToken=${result.refreshToken}`
+    );
+  }
+
   @Get('auth/google/create/callback')
   @UseGuards(AuthGuard('google'))
   async googleCreateRedirect(@Req() req, @Res() res) {
     const result = await this.repository.createWithGoogle(req.user);
     return res.redirect(
-      `${this.frontendUrl}/create/callback?token=${result.token}`
+      `${this.frontendUrl}/create/callback?token=${result.token}&refreshToken=${result.refreshToken}`
     );
   }
 
@@ -77,7 +87,7 @@ export class UserController {
   async googleLoginRedirect(@Req() req, @Res() res) {
     const result = await this.repository.loginWithGoogle(req.user);
     return res.redirect(
-      `${this.frontendUrl}/login/callback?token=${result.token}`
+      `${this.frontendUrl}/login/callback?token=${result.token}&refreshToken=${result.refreshToken}`
     );
   }
 

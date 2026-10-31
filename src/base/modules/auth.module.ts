@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { AbstractAuthenticateRepository } from '@repositories/auth/abstract-authenticate.repository';
 import { AuthenticateRepository } from '@repositories/auth/authenticate.repository';
 import { JwtStrategy } from '@common/guards/strategies/jwt.strategy';
+import { GoogleStrategy } from '@common/guards/strategies/google.strategy';
 // import { RolesGuard } from '@common/guards/roles.guard';
 import { JwtAuthGuard } from '@common/guards/jwt.guard';
 
@@ -34,6 +35,7 @@ import { JwtAuthGuard } from '@common/guards/jwt.guard';
     // LocalStrategy,
     JwtStrategy,
     JwtAuthGuard,
+    GoogleStrategy,
     // RolesGuard,
     {
       provide: AbstractAuthenticateRepository,

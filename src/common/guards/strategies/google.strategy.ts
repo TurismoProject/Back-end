@@ -16,11 +16,23 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
     async validate(accessToken: string, refreshToken: string, profile: any, done: VerifyCallback): Promise<any> {
         try {
-            const { id, name, emails } = profile;
+            const { id, name, emails, photos } = profile;
+            const email = emails && emails.length > 0 ? emails[0].value : null;
+
+            if (!email) {
+                return done(new UnauthorizedException('E-mail não fornecido pelo Google'), false);
+            }
+
+            const displayName =
+                profile.displayName ||
+                [name?.givenName, name?.familyName].filter(Boolean).join(' ') ||
+                'Usuário';
+
             const user = {
                 googleId: id,
-                email: emails[0].value,
-                name: name.givenName + ' ' + name.familyName,
+                email,
+                name: displayName,
+                picture: photos && photos.length > 0 ? photos[0].value : null,
                 accessToken,
             };
             return done(null, user);

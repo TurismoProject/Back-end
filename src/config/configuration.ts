@@ -1,6 +1,7 @@
 
 export default () => ({
     port: parseInt(process.env.PORT, 10) || 3000,
+    FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
     JWT_PRIVATE_KEY: process.env.JWT_PRIVATE_KEY,
     JWT_PUBLIC_KEY: process.env.JWT_PUBLIC_KEY,
     PROVIDER_URL: process.env.PROVIDER_URL,

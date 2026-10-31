@@ -76,20 +76,27 @@ export class UserRepository implements AbstractUserRepository {
         },
       });
 
-      const targetUser =
-        existingUser ??
-        (await this.prismaService.user.create({
+      let targetUser: User;
+
+      if (existingUser) {
+        if (!existingUser.googleId) {
+          targetUser = await this.prismaService.user.update({
+            where: { id: existingUser.id },
+            data: { googleId: user.googleId },
+          });
+        } else {
+          targetUser = existingUser;
+        }
+      } else {
+        targetUser = await this.prismaService.user.create({
           data: {
             email: user.email,
             name: user.name,
             googleId: user.googleId,
-            password: '',
-            cpf: '',
-            birthday: '',
-            phoneNumber: '',
-            address: '',
           },
-        }));
+        });
+      }
+
       const token = this.authService.generateTokens(targetUser);
 
       const authData: AuthModel = {
@@ -104,6 +111,7 @@ export class UserRepository implements AbstractUserRepository {
       return {
         user: targetUser,
         token: token.accessToken,
+        refreshToken: token.refreshToken,
       };
     } catch (error) {
       throw new ConflictException(
@@ -116,7 +124,7 @@ export class UserRepository implements AbstractUserRepository {
     try {
       const existingUser = await this.prismaService.user.findFirst({
         where: {
-          AND: [{ email: user.email }, { googleId: user.googleId }],
+          OR: [{ googleId: user.googleId }, { email: user.email }],
         },
       });
 
@@ -124,13 +132,34 @@ export class UserRepository implements AbstractUserRepository {
         throw new NotFoundException('Usuário não foi encontrado.');
       }
 
-      const token = this.authService.generateTokens(existingUser).accessToken;
+      let targetUser = existingUser;
+      if (!existingUser.googleId) {
+        targetUser = await this.prismaService.user.update({
+          where: { id: existingUser.id },
+          data: { googleId: user.googleId },
+        });
+      }
+
+      const token = this.authService.generateTokens(targetUser);
+
+      const authData: AuthModel = {
+        accessToken: token.accessToken,
+        refreshToken: token.refreshToken,
+        authId: targetUser.id,
+        expirationDateRefreshToken: token.expirationDateRefreshToken,
+      };
+
+      await this.authRepository.authenticateUser(authData);
 
       return {
-        user: existingUser,
-        token,
+        user: targetUser,
+        token: token.accessToken,
+        refreshToken: token.refreshToken,
       };
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new UnauthorizedException(
         `Erro ao fazer login com Google: ${error.message}`
       );
@@ -280,6 +309,11 @@ export class UserRepository implements AbstractUserRepository {
     const findedUser = await this.findByEmail(email);
     if (!findedUser) {
       throw new NotFoundException('Email e/ou senha inválidos');
+    }
+    if (!findedUser.password) {
+      throw new UnauthorizedException(
+        'Esta conta foi cadastrada com o Google. Por favor, acesse utilizando o login do Google.'
+      );
     }
     const isValidUser = await bcrypt.compare(password, findedUser.password);
     if (!isValidUser) {
