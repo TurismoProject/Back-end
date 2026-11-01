@@ -25,7 +25,9 @@ import {
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { AbstractProductsRepository } from '@repositories/products/abstract-products.repository';
+import { ApiBearerAuth, ApiBody, ApiConsumes } from '@nestjs/swagger';
 
+@ApiBearerAuth()
 @Controller('produto')
 export class ProductsController {
   constructor(
@@ -38,6 +40,38 @@ export class ProductsController {
    * O ID retornado é usado posteriormente na criação de saídas.
    */
   @Post('criar')
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    required: true,
+    schema: {
+      type: 'object',
+      required: ['name', 'description', 'price', 'supplierId', 'images'],
+      properties: {
+        name: { type: 'string', example: 'Passeio de barco' },
+        description: {
+          type: 'string',
+          example: 'Passeio de barco pela orla de Maceió.',
+        },
+        price: {
+          type: 'string',
+          example: '120.00',
+          description: 'Valor decimal, sem R$ e com ponto como separador.',
+        },
+        supplierId: {
+          type: 'string',
+          format: 'uuid',
+          description: 'ID do fornecedor retornado no login (supplier.id).',
+        },
+        images: {
+          type: 'array',
+          minItems: 1,
+          maxItems: 5,
+          items: { type: 'string', format: 'binary' },
+          description: 'De 1 a 5 imagens PNG ou JPEG; até 10 MB por arquivo.',
+        },
+      },
+    },
+  })
   @UseGuards(ReservationAccessGuard)
   @ReservationRole(Role.Supplier)
   @HttpCode(HttpStatus.CREATED)

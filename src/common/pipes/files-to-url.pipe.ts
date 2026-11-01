@@ -8,7 +8,6 @@ export class FilesToURLPipe
 {
   constructor(private bucketService: BucketService) {}
   async transform(value: Array<Express.Multer.File>) {
-    console.log(value);
     const urls = [];
     for (const file of value) {
       const bucket = this.bucketService.getBucket();

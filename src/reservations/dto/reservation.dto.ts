@@ -30,21 +30,31 @@ import {
  * Converte explicitamente números recebidos na query string antes de validá-los.
  */
 export class PaginationDto {
-  @ApiPropertyOptional({ default: 1 })
+  @ApiPropertyOptional({
+    type: 'integer',
+    default: 1,
+    minimum: 1,
+    maximum: 100000,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100000)
-  page = 1;
+  page: number = 1;
 
-  @ApiPropertyOptional({ default: 20, maximum: 100 })
+  @ApiPropertyOptional({
+    type: 'integer',
+    default: 20,
+    minimum: 1,
+    maximum: 100,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
-  limit = 20;
+  limit: number = 20;
 }
 
 /**
@@ -63,11 +73,11 @@ export class CreateDepartureDto {
   })
   startsAt: string;
 
-  @ApiPropertyOptional({ default: 'America/Maceio' })
+  @ApiPropertyOptional({ type: String, default: 'America/Maceio' })
   @IsOptional()
   @IsString()
   @MaxLength(100)
-  timeZone = 'America/Maceio';
+  timeZone: string = 'America/Maceio';
 
   @ApiProperty({ minimum: 1, maximum: 10000 })
   @IsInt()
