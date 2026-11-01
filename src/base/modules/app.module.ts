@@ -6,6 +6,7 @@ import { AdminModule } from '@modules/admin.module';
 import { ConfigModule } from '@nestjs/config';
 import configuration from '@config/configuration';
 import { EmailModule } from './email.module';
+import { PaymentModule } from '@modules/payment.module';
 
 @Module({
   imports: [
@@ -19,9 +20,9 @@ import { EmailModule } from './email.module';
     ProductsModule,
     SupplierModule,
     EmailModule,
+    PaymentModule,
   ],
   controllers: [],
   providers: [],
 })
 export class AppModule { }
-
